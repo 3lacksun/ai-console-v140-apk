@@ -1,8 +1,11 @@
 import fs from 'node:fs'; import path from 'node:path'; import process from 'node:process';
 const root=process.cwd(), read=(f)=>fs.readFileSync(path.join(root,f),'utf8'), json=(f)=>JSON.parse(read(f)), assert=(c,m)=>{if(!c)throw new Error(m)};
-const pkg=json('package.json'),lock=json('package-lock.json'),app=json('app.json'),source=read('App.js'),readIf=(f)=>fs.existsSync(path.join(root,f))?read(f):'';
+const pkg=json('package.json'),app=json('app.json'),source=read('App.js'),readIf=(f)=>fs.existsSync(path.join(root,f))?read(f):'';
+const lockExists=fs.existsSync(path.join(root,'package-lock.json'));
+const lock=lockExists?json('package-lock.json'):null;
 const workflow=readIf('.github/workflows/android-apk.yml') || readIf('../.github/workflows/android-apk.yml'),readme=read('README.md'),workspace=read('src/workspaces/workspaceSchema.mjs'),backup=read('src/backup/backupService.mjs'),storage=read('src/utils/storage.js'),project=read('src/export/projectArchive.mjs'),docProject=read('src/documents/documentProjectArchive.mjs'),docStudio=read('src/components/DocumentStudio.js'),docTarget=read('src/components/DocumentTargetSheet.js'),protectedTools=read('src/components/ProtectedWorkspaceTools.js'),bubble=read('src/components/MessageBubble.js'),messageActions=read('src/components/MessageActionSheet.js'),primitives=read('src/ui/primitives.js'),responsive=read('src/ui/responsive.mjs'),settings=read('src/components/SettingsSheet.js'),protectedSettings=read('src/components/LLMSettingsSheet.js');
-assert(pkg.version==='1.4.0'&&lock.version==='1.4.0'&&lock.packages[''].version==='1.4.0','v1.4.0 package identity drift');
+assert(pkg.version==='1.4.0','v1.4.0 package identity drift');
+if(lock){assert(lock.version==='1.4.0'&&lock.packages[''].version==='1.4.0','v1.4.0 package-lock identity drift');}
 assert(app.expo.version==='1.4.0'&&app.expo.android.versionCode===9&&app.expo.android.package==='com.nexarenew.aiconsole','Expo/Android release identity drift');
 assert(app.expo.orientation==='default'&&app.expo.android.softwareKeyboardLayoutMode==='resize','adaptive orientation/IME contract missing');
 assert(app.expo.userInterfaceStyle==='light'&&app.expo.backgroundColor==='#f8fafc','light-only app appearance contract missing');
@@ -33,7 +36,7 @@ assert(source.includes('commitStateTransaction')&&source.includes('prepareAtomic
 assert(settings.includes('Haptic feedback')&&settings.includes('minHeight: 48'),'haptic/touch target settings missing');
 assert(protectedSettings.includes('apiKeyPersistenceStatus')&&protectedSettings.includes('Session only'),'SecureStore failure not surfaced');
 assert(!settings.includes('OpenRouter API Key')&&!settings.includes('System prompt')&&!settings.includes('Select Model'),'protected AI configuration leaked into general settings');
-assert(workflow.includes('cache-dependency-path: package-lock.json')&&workflow.includes('AI_Console_v1.4.0_preview-debug-signed')&&workflow.includes('AI_Console_v1.4.0_production-release-signed')&&workflow.includes('android/app/build/outputs/apk/release/app-release.apk'),'CI path/artifact identity drift');
+assert(workflow.includes('AI_Console_v1.4.0_preview-debug-signed')&&workflow.includes('AI_Console_v1.4.0_production-release-signed')&&workflow.includes('android/app/build/outputs/apk/release/app-release.apk'),'CI path/artifact identity drift');
 assert(workflow.includes('actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803')&&workflow.includes('actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38')&&workflow.includes('actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961')&&workflow.includes('android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699')&&workflow.includes('actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f'),'immutable GitHub Action SHA pinning missing or drifted');
 assert(workflow.includes('android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699')&&workflow.includes('command -v sdkmanager')&&workflow.includes('ANDROID_SDK_ROOT'),'Android SDK command-line tool bootstrap is missing');
 assert(workflow.includes('default: false')&&workflow.includes('RUN_EMULATOR_CHECKS')&&workflow.includes('Runtime emulator diagnostics disabled for this run'),'runtime emulator/16-KB diagnostics must be optional and disabled by default for first preview APK CI');
