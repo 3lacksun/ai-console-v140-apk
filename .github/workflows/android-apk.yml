@@ -85,8 +85,8 @@ jobs:
           test -f app.json
           test -f .github/workflows/android-apk.yml
 
-      - name: npm ci
-        run: npm ci --no-fund
+      - name: npm install
+        run: npm install --no-fund
 
       - name: Production dependency security audit
         run: npm audit --omit=dev --audit-level=high
