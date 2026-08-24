@@ -1,0 +1,2 @@
+export const GENERATION_PRESENTATION=Object.freeze({IDLE:{label:'Ready',tone:'neutral'},QUEUED:{label:'Preparing',tone:'info'},STREAMING:{label:'Generating',tone:'info'},CANCELLING:{label:'Stopping',tone:'warning'},CANCELLED:{label:'Stopped',tone:'neutral'},FAILED:{label:'Failed',tone:'error'},COMPLETE:{label:'Complete',tone:'success'},OFFLINE_DRAFT:{label:'Offline draft',tone:'warning'}});
+export const generationPresentation=(status='IDLE')=>GENERATION_PRESENTATION[status]||{label:String(status),tone:'neutral'};

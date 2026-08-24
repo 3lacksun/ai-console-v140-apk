@@ -1,0 +1,16 @@
+0 verbose cli /opt/nvm/versions/node/v22.16.0/bin/node /opt/nvm/versions/node/v22.16.0/lib/node_modules/npm/bin/npm-cli.js
+1 info using npm@10.9.2
+2 info using node@v22.16.0
+3 silly config load:file:/opt/nvm/versions/node/v22.16.0/lib/node_modules/npm/npmrc
+4 silly config load:file:/mnt/data/AI_CONSOLE_V1_4_0_GITHUB_APK_REMEDIATION_READY_23082026220500_REPO/.npmrc
+5 silly config load:file:/home/oai/.npmrc
+6 silly config load:file:/opt/nvm/versions/node/v22.16.0/etc/npmrc
+7 verbose title npm exec expo install --check
+8 verbose argv "exec" "--" "expo" "install" "--check"
+9 verbose logfile logs-max:10 dir:/home/oai/.npm/_logs/2026-08-23T21_19_36_882Z-
+10 verbose logfile /home/oai/.npm/_logs/2026-08-23T21_19_36_882Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly logfile done cleaning log files
+13 silly packumentCache heap:2197815296 maxSize:549453824 maxEntrySize:274726912
+14 http fetch GET https://registry.npmjs.org/expo attempt 1 failed with EAI_AGAIN
+15 http fetch GET https://registry.npmjs.org/expo attempt 2 failed with EAI_AGAIN

@@ -1,0 +1,19 @@
+0 verbose cli /opt/nvm/versions/node/v22.16.0/bin/node /opt/nvm/versions/node/v22.16.0/bin/npm
+1 info using npm@10.9.2
+2 info using node@v22.16.0
+3 silly config load:file:/opt/nvm/versions/node/v22.16.0/lib/node_modules/npm/npmrc
+4 silly config load:file:/mnt/data/AI_CONSOLE_V1_4_0_GITHUB_APK_REMEDIATION_READY_23082026220500_REPO/.npmrc
+5 silly config load:file:/home/oai/.npmrc
+6 silly config load:file:/opt/nvm/versions/node/v22.16.0/etc/npmrc
+7 verbose title npm run check
+8 verbose argv "run" "check"
+9 verbose logfile logs-max:10 dir:/home/oai/.npm/_logs/2026-08-23T21_19_08_447Z-
+10 verbose logfile /home/oai/.npm/_logs/2026-08-23T21_19_08_447Z-debug-0.log
+11 silly logfile start cleaning logs, removing 2 files
+12 silly logfile done cleaning log files
+13 verbose cwd /mnt/data/AI_CONSOLE_V1_4_0_GITHUB_APK_REMEDIATION_READY_23082026220500_REPO
+14 verbose os Linux 6.18.35
+15 verbose node v22.16.0
+16 verbose npm  v10.9.2
+17 verbose exit 0
+18 info ok

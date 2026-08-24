@@ -1,0 +1,79 @@
+--- APK_ZIPALIGN_16K
+.github/workflows/android-apk.yml:223:      - name: APK_ZIPALIGN_16K gate
+.github/workflows/android-apk.yml:230:          echo "APK_ZIPALIGN_16K=PASS" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+README.md:50:The workflow separates `APK_ZIPALIGN_16K`, `APK_NATIVE_ELF_16K`, `EMULATOR_PAGE_SIZE_16K`, and `ANDROID_16_PROCESS_SURVIVAL`. Full Android 16 / 16-KB acceptance must not be marked PASS unless all relevant gates pass in the same fresh CI run.
+REMEDIATION_REPORT.md:32:   - `APK_ZIPALIGN_16K`;
+--- APK_NATIVE_ELF_16K
+.github/workflows/android-apk.yml:232:      - name: APK_NATIVE_ELF_16K gate
+.github/workflows/android-apk.yml:241:            echo "No packaged native ELF libraries found; APK_NATIVE_ELF_16K=PASS_NOT_APPLICABLE" | tee "$DIAGNOSTICS_DIR/native-elf-16k.txt"
+.github/workflows/android-apk.yml:242:            echo "APK_NATIVE_ELF_16K=PASS" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+.github/workflows/android-apk.yml:266:          if [[ "$failures" -ne 0 ]]; then echo "APK_NATIVE_ELF_16K=FAIL" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"; exit 1; fi
+.github/workflows/android-apk.yml:267:          echo "APK_NATIVE_ELF_16K=PASS" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+README.md:50:The workflow separates `APK_ZIPALIGN_16K`, `APK_NATIVE_ELF_16K`, `EMULATOR_PAGE_SIZE_16K`, and `ANDROID_16_PROCESS_SURVIVAL`. Full Android 16 / 16-KB acceptance must not be marked PASS unless all relevant gates pass in the same fresh CI run.
+REMEDIATION_REPORT.md:33:   - `APK_NATIVE_ELF_16K` using `readelf -lW` over packaged 64-bit `.so` files;
+--- EMULATOR_PAGE_SIZE_16K
+.github/workflows/android-apk.yml:314:            echo "EMULATOR_PAGE_SIZE_16K=UNVERIFIABLE" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+.github/workflows/android-apk.yml:318:          echo "EMULATOR_PAGE_SIZE_16K=PASS" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+README.md:50:The workflow separates `APK_ZIPALIGN_16K`, `APK_NATIVE_ELF_16K`, `EMULATOR_PAGE_SIZE_16K`, and `ANDROID_16_PROCESS_SURVIVAL`. Full Android 16 / 16-KB acceptance must not be marked PASS unless all relevant gates pass in the same fresh CI run.
+REMEDIATION_REPORT.md:36:   - `EMULATOR_PAGE_SIZE_16K`;
+--- ANDROID_16_PROCESS_SURVIVAL
+.github/workflows/android-apk.yml:328:            echo "ANDROID_16_PROCESS_SURVIVAL=FAIL" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+.github/workflows/android-apk.yml:333:            echo "ANDROID_16_PROCESS_SURVIVAL=FAIL" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+.github/workflows/android-apk.yml:337:          echo "ANDROID_16_PROCESS_SURVIVAL=PASS" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+README.md:50:The workflow separates `APK_ZIPALIGN_16K`, `APK_NATIVE_ELF_16K`, `EMULATOR_PAGE_SIZE_16K`, and `ANDROID_16_PROCESS_SURVIVAL`. Full Android 16 / 16-KB acceptance must not be marked PASS unless all relevant gates pass in the same fresh CI run.
+REMEDIATION_REPORT.md:37:   - `ANDROID_16_PROCESS_SURVIVAL`;
+--- logcat-full
+.github/workflows/android-apk.yml:325:          adb logcat -d > "$DIAGNOSTICS_DIR/logcat-full.txt"
+.github/workflows/android-apk.yml:332:          if grep -Eqi 'FATAL EXCEPTION|UnsatisfiedLinkError|NoClassDefFoundError|ActivityNotFoundException|ReactNativeJS.*(TypeError|ReferenceError|Invariant Violation|Fatal)|SoLoader|SIGSEGV|ANR|permission denial|Process: com\.nexarenew\.aiconsole.*has died' "$DIAGNOSTICS_DIR/logcat-full.txt"; then
+.github/workflows/android-apk.yml:345:          adb logcat -d > "$DIAGNOSTICS_DIR/logcat-full.txt" 2>/dev/null
+.github/workflows/android-apk.yml:346:          grep -Eai 'FATAL EXCEPTION|UnsatisfiedLinkError|NoClassDefFoundError|ActivityNotFoundException|ReactNativeJS|SoLoader|SIGSEGV|ANR|permission denial|has died' "$DIAGNOSTICS_DIR/logcat-full.txt" > "$DIAGNOSTICS_DIR/logcat-fatal-filtered.txt" 2>/dev/null
+.github/workflows/android-apk.yml:352:            echo "FATAL_EXCEPTION=$(grep -Eai 'FATAL EXCEPTION' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+.github/workflows/android-apk.yml:353:            echo "UNSATISFIED_LINK_ERROR=$(grep -Eai 'UnsatisfiedLinkError' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+.github/workflows/android-apk.yml:354:            echo "NO_CLASS_DEF_FOUND=$(grep -Eai 'NoClassDefFoundError' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+.github/workflows/android-apk.yml:355:            echo "ACTIVITY_NOT_FOUND=$(grep -Eai 'ActivityNotFoundException' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+.github/workflows/android-apk.yml:356:            echo "REACT_NATIVE_JS_FATAL=$(grep -Eai 'ReactNativeJS.*(Fatal|TypeError|ReferenceError|Invariant Violation)' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+.github/workflows/android-apk.yml:357:            echo "SOLOADER_FAILURE=$(grep -Eai 'SoLoader' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+.github/workflows/android-apk.yml:358:            echo "SIGSEGV_OR_TOMBSTONE=$(grep -Eai 'SIGSEGV|tombstone' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+.github/workflows/android-apk.yml:359:            echo "ANR=$(grep -Eai 'ANR' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+.github/workflows/android-apk.yml:360:            echo "PERMISSION_DENIAL=$(grep -Eai 'permission denial' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+.github/workflows/android-apk.yml:361:            echo "PROCESS_DEATH_WITHOUT_FATAL_LOG=$(grep -Eai 'has died|process.*died' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+--- tombstone
+.github/workflows/android-apk.yml:350:          adb shell ls -la /data/tombstones > "$DIAGNOSTICS_DIR/tombstones-list.txt" 2>/dev/null
+.github/workflows/android-apk.yml:358:            echo "SIGSEGV_OR_TOMBSTONE=$(grep -Eai 'SIGSEGV|tombstone' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+REMEDIATION_REPORT.md:44:7. Added first-class crash diagnostics and failure classification for fatal exception, `UnsatisfiedLinkError`, `NoClassDefFoundError`, `ActivityNotFoundException`, React Native JS fatal signatures, SoLoader failures, SIGSEGV/tombstones, ANR, permission denial and process death.
+--- dropbox
+.github/workflows/android-apk.yml:349:          adb shell dumpsys dropbox --print > "$DIAGNOSTICS_DIR/dropbox-crash-entries.txt" 2>/dev/null
+--- production
+.github/workflows/android-apk.yml:7:        description: "preview uses debug signing; production requires configured GitHub Secrets"
+.github/workflows/android-apk.yml:13:          - production
+.github/workflows/android-apk.yml:34:  PRODUCTION_APK_NAME: "AI_Console_v1.4.0_production-release-signed.apk"
+.github/workflows/android-apk.yml:122:        if: ${{ github.event.inputs.signing_mode == 'production' }}
+.github/workflows/android-apk.yml:134:            if [[ -z "${!name:-}" ]]; then echo "Missing required production signing secret: $name" >&2; missing=1; fi
+.github/workflows/android-apk.yml:136:          if [[ "$missing" -ne 0 ]]; then echo "PRODUCTION_SIGNING_PREFLIGHT=FAIL" | tee "$DIAGNOSTICS_DIR/production-signing-preflight.txt"; exit 1; fi
+.github/workflows/android-apk.yml:137:          echo "PRODUCTION_SIGNING_PREFLIGHT=PASS" | tee "$DIAGNOSTICS_DIR/production-signing-preflight.txt"
+.github/workflows/android-apk.yml:139:      - name: Decode production keystore
+.github/workflows/android-apk.yml:140:        if: ${{ github.event.inputs.signing_mode == 'production' }}
+.github/workflows/android-apk.yml:148:          test -s "$KEYSTORE_PATH" || { echo "Decoded production keystore is empty" >&2; exit 1; }
+.github/workflows/android-apk.yml:161:      - name: Configure production release signing
+.github/workflows/android-apk.yml:162:        if: ${{ github.event.inputs.signing_mode == 'production' }}
+.github/workflows/android-apk.yml:170:        if: ${{ github.event.inputs.signing_mode != 'production' }}
+.github/workflows/android-apk.yml:175:          echo "This artefact is a preview/debug-signed APK. It is not production-signed and must not be described as production-ready." | tee -a "$DIAGNOSTICS_DIR/preview-signing-mode.txt"
+.github/workflows/android-apk.yml:191:          if [[ "${{ github.event.inputs.signing_mode }}" == "production" ]]; then
+.github/workflows/android-apk.yml:278:          if [[ "${{ github.event.inputs.signing_mode }}" == "production" ]]; then
+.github/workflows/android-apk.yml:284:            test "$actual" = "$expected" || { echo "Signing certificate SHA-256 does not match the authorised production certificate" >&2; exit 1; }
+.github/workflows/android-apk.yml:285:            echo "SIGNING_MODE=production-release-signed" | tee "$DIAGNOSTICS_DIR/signing-mode.txt"
+.github/workflows/android-apk.yml:376:          name: ${{ github.event.inputs.signing_mode == 'production' && 'AI_Console_v1.4.0_production-release-signed' || 'AI_Console_v1.4.0_preview-debug-signed' }}
+README.md:31:The GitHub production workflow runs from `source/`, uses exact lockfile dependency installation, Expo diagnostics, production export/prebuild, external signing secrets, certificate verification, and publishes `AI_Console_v1.4.0_production_apk` only after the signing gate.
+README.md:33:Android runtime, physical-device accessibility, live provider and production-signing acceptance are evidence classes separate from local static/unit verification and must not be inferred from this source package.
+README.md:46:| Production signing | UNVERIFIABLE | Requires real GitHub Secrets and a fresh production workflow run. Missing secrets fail explicitly. |
+VERIFICATION_STATUS.md:32:- Production APK: UNVERIFIABLE / NO-GO until secrets and a production run pass.
+REMEDIATION_REPORT.md:41:4. Added explicit preview/debug-signed versus production/release-signed artefact labelling.
+REMEDIATION_REPORT.md:42:5. Added production signing preflight that fails when required production signing secrets are missing.
+REMEDIATION_REPORT.md:43:6. Added signer certificate SHA-256 comparison for production builds without printing secret values.
+--- zipalign -c -P 16
+--- getconf PAGE_SIZE
+.github/workflows/android-apk.yml:308:            echo "PAGE_SIZE=$(adb shell getconf PAGE_SIZE | tr -d '\r')"
+--- ro.product.cpu.pagesize.max
+.github/workflows/android-apk.yml:309:            echo "ro.product.cpu.pagesize.max=$(adb shell getprop ro.product.cpu.pagesize.max | tr -d '\r')"
+--- ro.product.build.16k_page.enabled
+.github/workflows/android-apk.yml:310:            echo "ro.product.build.16k_page.enabled=$(adb shell getprop ro.product.build.16k_page.enabled | tr -d '\r')"

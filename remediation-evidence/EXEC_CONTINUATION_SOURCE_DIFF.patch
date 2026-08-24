@@ -1,0 +1,161 @@
+diff -ruN '--exclude=remediation-evidence' /mnt/data/exec_ai_console_clean_1787521219/.github/workflows/android-apk.yml /mnt/data/exec_ai_console_1787521015/.github/workflows/android-apk.yml
+--- /mnt/data/exec_ai_console_clean_1787521219/.github/workflows/android-apk.yml	2026-08-23 21:20:38.000000000 +0000
++++ /mnt/data/exec_ai_console_1787521015/.github/workflows/android-apk.yml	2026-08-23 21:39:54.972547963 +0000
+@@ -41,17 +41,17 @@
+     timeout-minutes: 120
+     steps:
+       - name: Repository checkout
+-        uses: actions/checkout@v4
++        uses: actions/checkout@v6
+ 
+       - name: Set up Node 24
+-        uses: actions/setup-node@v4
++        uses: actions/setup-node@v6
+         with:
+           node-version: ${{ env.NODE_VERSION }}
+           cache: npm
+           cache-dependency-path: package-lock.json
+ 
+       - name: Set up Java 17
+-        uses: actions/setup-java@v4
++        uses: actions/setup-java@v5
+         with:
+           distribution: temurin
+           java-version: ${{ env.JAVA_VERSION }}
+@@ -371,7 +371,7 @@
+ 
+       - name: Upload APK artefact
+         if: always()
+-        uses: actions/upload-artifact@v4
++        uses: actions/upload-artifact@v6
+         with:
+           name: ${{ github.event.inputs.signing_mode == 'production' && 'AI_Console_v1.4.0_production-release-signed' || 'AI_Console_v1.4.0_preview-debug-signed' }}
+           path: |
+@@ -382,7 +382,7 @@
+ 
+       - name: Upload Android diagnostics artefacts
+         if: always()
+-        uses: actions/upload-artifact@v4
++        uses: actions/upload-artifact@v6
+         with:
+           name: AI_Console_v1.4.0_android-ci-diagnostics
+           path: ci-diagnostics/**
+diff -ruN '--exclude=remediation-evidence' /mnt/data/exec_ai_console_clean_1787521219/README.md /mnt/data/exec_ai_console_1787521015/README.md
+--- /mnt/data/exec_ai_console_clean_1787521219/README.md	2026-08-23 21:20:53.000000000 +0000
++++ /mnt/data/exec_ai_console_1787521015/README.md	2026-08-23 21:39:55.503877252 +0000
+@@ -28,7 +28,7 @@
+ npm run verify:local
+ ```
+ 
+-The GitHub production workflow runs from `source/`, uses exact lockfile dependency installation, Expo diagnostics, production export/prebuild, external signing secrets, certificate verification, and publishes `AI_Console_v1.4.0_production_apk` only after the signing gate.
++The GitHub workflow runs from the repository root, uses exact lockfile dependency installation, Expo diagnostics, export/prebuild checks, external production signing secrets when production mode is selected, certificate verification, and publishes artefacts with explicit `preview-debug-signed` or `production-release-signed` labels.
+ 
+ Android runtime, physical-device accessibility, live provider and production-signing acceptance are evidence classes separate from local static/unit verification and must not be inferred from this source package.
+ 
+@@ -38,7 +38,7 @@
+ 
+ | Gate | Status | Evidence basis |
+ |---|---:|---|
+-| Repository structure | PASS | Repository-root layout contains `package.json`, `package-lock.json`, `App.js`, `app.json`, `.github/workflows/android-apk.yml`, tests, scripts, assets and docs. |
++| Repository structure | PASS | Repository-root layout contains `package.json`, `package-lock.json`, `index.js`, `App.js`, `app.json`, `.github/workflows/android-apk.yml`, tests, scripts, assets and docs. |
+ | Static checks | PASS | `npm run check` executed locally after remediation and returned `STATIC_CHECK: PASS`. |
+ | Lockfile/package metadata consistency | PASS | `scripts/ci-version-guard.mjs` and direct lock comparison executed locally. |
+ | Tests | FAIL | The test suite now forbids release-critical skips; local execution failed because this environment could not complete `npm ci`, leaving `jszip` unavailable. |
+@@ -48,3 +48,8 @@
+ | Full 16-KB acceptance | UNVERIFIABLE | Requires APK ZIP alignment, packaged 64-bit ELF `LOAD` segment alignment, runtime `PAGE_SIZE=16384`, and launch survival. |
+ 
+ The workflow separates `APK_ZIPALIGN_16K`, `APK_NATIVE_ELF_16K`, `EMULATOR_PAGE_SIZE_16K`, and `ANDROID_16_PROCESS_SURVIVAL`. Full Android 16 / 16-KB acceptance must not be marked PASS unless all relevant gates pass in the same fresh CI run.
++
++
++## Continuation execution status — 23/08/2026 22:39 London
++
++A continuation pass verified the corrected ZIP hash and archive integrity, clean-extracted the package, added an explicit `index.js` Expo entry point, changed `package.json` `main` to `index.js`, and updated GitHub official action majors to the current Node 24-capable series (`checkout@v6`, `setup-node@v6`, `setup-java@v5`, `upload-artifact@v6`). Local `npm ci` could not complete in this sandbox because dependency restoration requires registry/network access that did not return within the execution window. Partial `node_modules` was deleted before subsequent checks. Static checks pass; tests still fail at the release-critical `jszip` package-test gate because dependencies are not restored locally.
+diff -ruN '--exclude=remediation-evidence' /mnt/data/exec_ai_console_clean_1787521219/REMEDIATION_REPORT.md /mnt/data/exec_ai_console_1787521015/REMEDIATION_REPORT.md
+--- /mnt/data/exec_ai_console_clean_1787521219/REMEDIATION_REPORT.md	2026-08-23 21:21:49.000000000 +0000
++++ /mnt/data/exec_ai_console_1787521015/REMEDIATION_REPORT.md	2026-08-23 21:39:55.504061667 +0000
+@@ -58,3 +58,16 @@
+ - A fresh GitHub Actions run was not executed from this environment.
+ - Android emulator/device process-survival evidence was not produced locally.
+ - Production signing was not verified because real GitHub Secrets were unavailable.
++
++
++## Continuation remediation — 23/08/2026 22:39 London
++
++Additional locally actionable corrections were applied after executing the continuation prompt:
++
++1. Added explicit repository-root `index.js` using Expo `registerRootComponent(App)` so the package satisfies the continuation prompt's expected repository-root file set.
++2. Updated `package.json` `main` from `node_modules/expo/AppEntry.js` to `index.js`.
++3. Updated GitHub Actions official action majors to current Node 24-capable releases: `actions/checkout@v6`, `actions/setup-node@v6`, `actions/setup-java@v5`, and `actions/upload-artifact@v6`.
++4. Updated static verification expectations to match those workflow action majors.
++5. Updated README and verification status to remove the stale `source/` workflow statement and record continuation evidence.
++
++No APK build, emulator runtime, Android 16 survival, full 16-KB acceptance, or production-signing PASS claim was made.
+diff -ruN '--exclude=remediation-evidence' /mnt/data/exec_ai_console_clean_1787521219/VERIFICATION_STATUS.md /mnt/data/exec_ai_console_1787521015/VERIFICATION_STATUS.md
+--- /mnt/data/exec_ai_console_clean_1787521219/VERIFICATION_STATUS.md	2026-08-23 21:21:49.000000000 +0000
++++ /mnt/data/exec_ai_console_1787521015/VERIFICATION_STATUS.md	2026-08-23 21:39:55.504006565 +0000
+@@ -7,7 +7,7 @@
+ | Available baseline ZIP integrity | PASS | `unzip -tq` passed for `AI_CONSOLE_V1_4_0_LLM_REMEDIATION_COMPLETE_HANDOVER_23082026185124.zip`. |
+ | Available baseline SHA-256 | PASS | `a1ba798803a84233ac4b86ae44d7e60fee4f4702e69924f2e3616c0e23ab2733`. |
+ | Framework/build-system identification | PASS | Expo / React Native / Expo prebuild Android APK workflow. |
+-| Repository-root structure | PASS | Package contains repository-root app files, `.github/workflows`, scripts, tests, assets and docs. |
++| Repository-root structure | PASS | Package contains repository-root app files including explicit `index.js`, `.github/workflows`, scripts, tests, assets and docs. |
+ | package.json / package-lock sync | PASS | Direct lock comparison returned `LOCK_SYNC_PASS`. |
+ | SDK package guard | PASS | `node scripts/ci-version-guard.mjs` returned `CI_VERSION_GUARD: PASS`; it also warns that `expo-speech-recognition ^56.0.1` must be runtime-proven. |
+ | Workflow YAML parse | PASS | Python YAML parse returned `YAML_PARSE_PASS`. |
+@@ -32,3 +32,22 @@
+ - Production APK: UNVERIFIABLE / NO-GO until secrets and a production run pass.
+ - Android 16 runtime acceptance: UNVERIFIABLE / NO-GO until fresh runtime survival passes.
+ - Full 16-KB acceptance: UNVERIFIABLE / NO-GO until ZIP, ELF and runtime page-size/survival gates pass together.
++
++
++## Continuation execution — 23/08/2026 22:39 London
++
++| Gate | Status | Evidence |
++|---|---:|---|
++| Corrected input ZIP SHA-256 | PASS | `cb7a65317018c5cc46bb22b55c5d913913637b973f01ad691b54e555b93c812e` matched. |
++| Corrected input ZIP integrity | PASS | `unzip -t` reported no compressed-data errors. |
++| Clean extraction | PASS | Repository files extracted into a clean working directory. |
++| Explicit Expo entry point | PASS | Added `index.js` with `registerRootComponent(App)` and set `package.json` `main` to `index.js`. |
++| GitHub action major versions | PASS | Workflow updated to `actions/checkout@v6`, `actions/setup-node@v6`, `actions/setup-java@v5`, and `actions/upload-artifact@v6` after current official action reference checks. |
++| npm cache verification | PASS | `npm cache verify` completed. |
++| npm ci | UNVERIFIABLE | Fresh `npm ci` timed out in the sandbox with no registry dependency restoration completed; partial `node_modules` was deleted. |
++| SDK/package static guard | PASS | `node scripts/ci-version-guard.mjs` returned `CI_VERSION_GUARD: PASS` and preserved the speech-recognition runtime warning. |
++| Static checks | PASS | `npm run check` returned `STATIC_CHECK: PASS`. |
++| Full tests | FAIL | `npm test` ran 49 tests: 48 PASS, 1 FAIL. The failing gate is the release-critical `jszip` package test because dependencies were not restored locally. |
++| Expo install check | UNVERIFIABLE | `npx expo install --check` could not complete without restored dependencies/network access. |
++| expo-doctor | UNVERIFIABLE | Not completed because dependency restoration remains unresolved locally. |
++| GitHub Actions APK build | UNVERIFIABLE | Not run in this execution pass. |
+diff -ruN '--exclude=remediation-evidence' /mnt/data/exec_ai_console_clean_1787521219/index.js /mnt/data/exec_ai_console_1787521015/index.js
+--- /mnt/data/exec_ai_console_clean_1787521219/index.js	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/exec_ai_console_1787521015/index.js	2026-08-23 21:39:54.490159591 +0000
+@@ -0,0 +1,6 @@
++import { registerRootComponent } from 'expo';
++import App from './App';
++
++// Expo's registerRootComponent wires AppRegistry correctly for Expo Go,
++// development clients, production Android builds, and native reload paths.
++registerRootComponent(App);
+diff -ruN '--exclude=remediation-evidence' /mnt/data/exec_ai_console_clean_1787521219/package.json /mnt/data/exec_ai_console_1787521015/package.json
+--- /mnt/data/exec_ai_console_clean_1787521219/package.json	2026-08-23 12:44:20.000000000 +0000
++++ /mnt/data/exec_ai_console_1787521015/package.json	2026-08-23 21:39:54.514159592 +0000
+@@ -2,7 +2,7 @@
+   "name": "ai-console",
+   "version": "1.4.0",
+   "private": true,
+-  "main": "node_modules/expo/AppEntry.js",
++  "main": "index.js",
+   "scripts": {
+     "start": "expo start",
+     "android": "expo run:android",
+diff -ruN '--exclude=remediation-evidence' /mnt/data/exec_ai_console_clean_1787521219/scripts/static-check.mjs /mnt/data/exec_ai_console_1787521015/scripts/static-check.mjs
+--- /mnt/data/exec_ai_console_clean_1787521219/scripts/static-check.mjs	2026-08-23 21:20:38.000000000 +0000
++++ /mnt/data/exec_ai_console_1787521015/scripts/static-check.mjs	2026-08-23 21:39:54.972688612 +0000
+@@ -34,7 +34,7 @@
+ assert(protectedSettings.includes('apiKeyPersistenceStatus')&&protectedSettings.includes('Session only'),'SecureStore failure not surfaced');
+ assert(!settings.includes('OpenRouter API Key')&&!settings.includes('System prompt')&&!settings.includes('Select Model'),'protected AI configuration leaked into general settings');
+ assert(workflow.includes('cache-dependency-path: package-lock.json')&&workflow.includes('AI_Console_v1.4.0_preview-debug-signed')&&workflow.includes('AI_Console_v1.4.0_production-release-signed')&&workflow.includes('android/app/build/outputs/apk/release/app-release.apk'),'CI path/artifact identity drift');
+-assert(workflow.includes('actions/checkout@v4')&&workflow.includes('actions/setup-node@v4')&&workflow.includes('actions/setup-java@v4')&&workflow.includes('actions/upload-artifact@v4'),'current GitHub Actions major-version references missing');
++assert(workflow.includes('actions/checkout@v6')&&workflow.includes('actions/setup-node@v6')&&workflow.includes('actions/setup-java@v5')&&workflow.includes('actions/upload-artifact@v6'),'current GitHub Actions Node 24 major-version references missing');
+ 
+ assert(!source.includes("from 'expo-speech-recognition'")&&source.includes("require('expo-speech-recognition')")&&source.includes('getSpeechRecognitionModule'),'speech recognition must be lazily resolved behind a startup-safe capability guard');
+ assert(source.includes("import AppErrorBoundary from './src/components/AppErrorBoundary'")&&source.includes('<AppErrorBoundary><AIConsoleApp /></AppErrorBoundary>'),'root React error boundary missing');

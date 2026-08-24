@@ -1,0 +1,18 @@
+0 verbose cli /opt/nvm/versions/node/v22.16.0/bin/node /opt/nvm/versions/node/v22.16.0/bin/npm
+1 info using npm@10.9.2
+2 info using node@v22.16.0
+3 silly config load:file:/opt/nvm/versions/node/v22.16.0/lib/node_modules/npm/npmrc
+4 silly config load:file:/.npmrc
+5 silly config load:file:/home/oai/.npmrc
+6 silly config load:file:/opt/nvm/versions/node/v22.16.0/etc/npmrc
+7 verbose title npm cache ls jszip
+8 verbose argv "cache" "ls" "jszip"
+9 verbose logfile logs-max:10 dir:/home/oai/.npm/_logs/2026-08-23T21_18_07_373Z-
+10 verbose logfile /home/oai/.npm/_logs/2026-08-23T21_18_07_373Z-debug-0.log
+11 silly logfile done cleaning log files
+12 verbose cwd /
+13 verbose os Linux 6.18.35
+14 verbose node v22.16.0
+15 verbose npm  v10.9.2
+16 verbose exit 0
+17 info ok

@@ -1,0 +1,3 @@
+YAML_PARSE: PASS
+top_keys: [True, 'env', 'jobs', 'name', 'permissions']
+jobs: ['build-android-apk']

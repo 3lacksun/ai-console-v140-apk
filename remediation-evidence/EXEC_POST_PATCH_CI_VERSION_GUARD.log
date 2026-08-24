@@ -1,0 +1,3 @@
+SDK57_NATIVE_MODULE_WARNING: expo-speech-recognition declares ^56.0.1; startup must remain guarded and CI must not assume native compatibility until Android runtime checks pass.
+ANDROID_SDK_36_RESOLUTION: guarded by Expo SDK 57 package alignment; workflow verifies generated Gradle compile/target SDK after Expo prebuild.
+CI_VERSION_GUARD: PASS

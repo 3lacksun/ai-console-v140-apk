@@ -1,0 +1,37 @@
+{
+  "project": "AI Console",
+  "release_version": "1.4.0",
+  "package_classification": "HANDOVER",
+  "android_package": "com.nexarenew.aiconsole",
+  "android_version_code": 9,
+  "authoritative_baseline": "AI_CONSOLE_V1_4_0_EXEC002_COMPLETE_HANDOVER_23082026135228.zip",
+  "authoritative_baseline_sha256": "4001faaedf511a7c7a8e799303c03b6cbac10fcb8cb1b9195dcc2083830e8494",
+  "master_rules_version": "1.2.13",
+  "master_rules_revision": "20260823-01",
+  "candidate_identity": "LLM_DEEP_REMEDIATION_CANDIDATE_23082026185124",
+  "remediation": {
+    "application_release_issues_catalogued": 20,
+    "handover_metadata_issues_catalogued": 1,
+    "application_release_issues_remediated_in_candidate": 20,
+    "patched_source_files": 25,
+    "patch_file": "evidence/remediation/AI_CONSOLE_V1_4_0_LLM_REMEDIATION_ALL_FIXES_23082026185124.diff"
+  },
+  "verification": {
+    "patch_apply_pristine_baseline": "PASS",
+    "git_diff_check": "PASS",
+    "static_contract": "PASS",
+    "tests_total": 62,
+    "tests_passed": 60,
+    "tests_failed": 0,
+    "tests_skipped": 2,
+    "jszip_round_trips": "UNVERIFIABLE_LOCAL_DEPENDENCY_TREE",
+    "new_android_build": "UNVERIFIABLE_LOCAL",
+    "android16_cold_launch": "UNVERIFIABLE_UNTIL_REVISED_CI_RUNS",
+    "physical_device_retest": "UNVERIFIABLE",
+    "exact_original_crash_stack": "UNVERIFIABLE_WITHOUT_LOGCAT"
+  },
+  "LOCAL_GO": "PARTIAL",
+  "PACKAGE_GO": "PASS",
+  "PRODUCTION_GO": false,
+  "generated_at": "2026-08-23T18:51:24+01:00"
+}

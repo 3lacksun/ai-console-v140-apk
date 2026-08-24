@@ -1,0 +1,3 @@
+# AI Console is a native Expo / React Native application.
+# No Apache/LiteSpeed runtime directives are required for the native build.
+# This intentionally inert file satisfies project packaging conventions.

@@ -1,0 +1,179 @@
+Only in .: .github
+diff -ru '--exclude=node_modules' /mnt/data/ai_console_work/extracted/AI_CONSOLE_V1_4_0_LLM_REMEDIATION_HANDOVER_ROOT_23082026185124/source/App.js ./App.js
+--- /mnt/data/ai_console_work/extracted/AI_CONSOLE_V1_4_0_LLM_REMEDIATION_HANDOVER_ROOT_23082026185124/source/App.js	2026-08-23 17:23:03.000000000 +0000
++++ ./App.js	2026-08-23 21:11:33.212369894 +0000
+@@ -76,7 +76,7 @@
+   const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT);
+   const [temperature, setTemperature] = useState(0.2);
+   const [maxTokens, setMaxTokens] = useState(DEFAULT_OUTPUT_TOKENS);
+-  const [colorMode, setColorMode] = useState('dark');
++  const [colorMode, setColorMode] = useState('light');
+   const [conversationState, setConversationState] = useState(() => normaliseCState({}));
+   const [input, setInput] = useState('');
+   const [attachmentSession, setAttachmentSession] = useState(() => createAttachmentSession());
+@@ -156,7 +156,7 @@
+     const hydrate = async () => {
+       try {
+         const [storedKeyResult, storedGroups, storedModel, storedPrompt, storedTemp, storedMaxTokens, storedChats, storedActiveId, storedMessages, storedTokens, storedMode, versionedState, storedLocale, storedPlaybackSpeed, storedDestination, storedHaptics] = await Promise.all([
+-          getApiKeyResult(), getJSON('modelGroups', INITIAL_MODELS), getJSON('activeModel', 'openrouter/auto'), getJSON('systemPrompt', DEFAULT_SYSTEM_PROMPT), getJSON('temperature', 0.2), getJSON('maxTokens', DEFAULT_OUTPUT_TOKENS), getJSON('chats', []), getJSON('activeChatId', ''), getJSON('chatHistory', []), getJSON('estimatedTokens', 0), getJSON('colorMode', 'dark'), getVersionedAppState(null), getJSON('voiceLocale', 'en-GB'), getJSON('playbackSpeed', 1), getJSON('primaryDestination', 'chats'), getJSON('hapticsEnabled', true),
++          getApiKeyResult(), getJSON('modelGroups', INITIAL_MODELS), getJSON('activeModel', 'openrouter/auto'), getJSON('systemPrompt', DEFAULT_SYSTEM_PROMPT), getJSON('temperature', 0.2), getJSON('maxTokens', DEFAULT_OUTPUT_TOKENS), getJSON('chats', []), getJSON('activeChatId', ''), getJSON('chatHistory', []), getJSON('estimatedTokens', 0), getJSON('colorMode', 'light'), getVersionedAppState(null), getJSON('voiceLocale', 'en-GB'), getJSON('playbackSpeed', 1), getJSON('primaryDestination', 'chats'), getJSON('hapticsEnabled', true),
+         ]);
+         const legacy = { chats: storedChats, activeChatId: storedActiveId, chatHistory: storedMessages, estimatedTokens: storedTokens };
+         const state = normaliseCState(versionedState || migrateBToC(migratePackageAToB(legacy)));
+@@ -170,7 +170,7 @@
+         setTemperature(Number(storedTemp) || 0.2);
+         setMaxTokens(normaliseOutputTokens(storedMaxTokens));
+         setConversationState(state);
+-        setColorMode(storedMode === 'light' ? 'light' : 'dark');
++        setColorMode('light');
+         setVoiceLocale(typeof storedLocale === 'string' ? storedLocale : 'en-GB');
+         setPlaybackSpeed(Number(storedPlaybackSpeed) || 1);
+         setPrimaryDestination(['chats', 'workspaces', 'documents', 'settings'].includes(storedDestination) ? storedDestination : 'chats');
+@@ -382,7 +382,7 @@
+     </View>
+     {layout === 'compact' && <PrimaryNavigation items={navigationItems} active={primaryDestination} onSelect={(id) => { triggerHaptic(hapticsEnabled); setPrimaryDestination(id); }} palette={palette} />}
+   </SafeAreaView></KeyboardAvoidingView>
+-  <SettingsSheet visible={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} onExportChat={() => handleExport('txt')} onExportPdf={() => handleExportPdf(PDF_LAYOUTS.POLISHED)} onExportPdfCompact={() => handleExportPdf(PDF_LAYOUTS.COMPACT)} onCreateDocumentZip={handleCreateDocumentZip} onClearChat={() => { if (activeChat) { stopGenerationForChat(activeChat.id); updateChat(activeChat.id, (chat) => ({ ...chat, messages: [] })); } }} onExportData={() => handleExport('json')} onImportData={handleImport} onBackup={handleBackup} onRestore={handleRestore} dataStats={{ chats: chats.length, archived: chats.filter((chat) => chat.archived).length, attachments: chats.reduce((total, chat) => total + chat.messages.filter((message) => message.attachment).length, 0), queued: conversationState.offlineQueue.length, schema: conversationState.storageSchemaVersion }} colorMode={colorMode} onToggleColorMode={() => setColorMode((mode) => mode === 'light' ? 'dark' : 'light')} voiceLocale={voiceLocale} onChangeVoiceLocale={setVoiceLocale} playbackSpeed={playbackSpeed} onChangePlaybackSpeed={setPlaybackSpeed} onStopSpeech={handleStopSpeech} hapticsEnabled={hapticsEnabled} onToggleHaptics={setHapticsEnabled} returnFocusRef={settingsTriggerRef} palette={palette} />
++  <SettingsSheet visible={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} onExportChat={() => handleExport('txt')} onExportPdf={() => handleExportPdf(PDF_LAYOUTS.POLISHED)} onExportPdfCompact={() => handleExportPdf(PDF_LAYOUTS.COMPACT)} onCreateDocumentZip={handleCreateDocumentZip} onClearChat={() => { if (activeChat) { stopGenerationForChat(activeChat.id); updateChat(activeChat.id, (chat) => ({ ...chat, messages: [] })); } }} onExportData={() => handleExport('json')} onImportData={handleImport} onBackup={handleBackup} onRestore={handleRestore} dataStats={{ chats: chats.length, archived: chats.filter((chat) => chat.archived).length, attachments: chats.reduce((total, chat) => total + chat.messages.filter((message) => message.attachment).length, 0), queued: conversationState.offlineQueue.length, schema: conversationState.storageSchemaVersion }} colorMode={colorMode} onToggleColorMode={() => setColorMode('light')} voiceLocale={voiceLocale} onChangeVoiceLocale={setVoiceLocale} playbackSpeed={playbackSpeed} onChangePlaybackSpeed={setPlaybackSpeed} onStopSpeech={handleStopSpeech} hapticsEnabled={hapticsEnabled} onToggleHaptics={setHapticsEnabled} returnFocusRef={settingsTriggerRef} palette={palette} />
+   <LLMSettingsSheet visible={isLLMSettingsOpen} onClose={() => { setIsModelPickerOpen(false); setIsLLMSettingsOpen(false); }} apiKey={apiKey} onChangeApiKey={setApiKeyState} currentModelName={currentModelName()} onOpenModelPicker={() => setIsModelPickerOpen(true)} systemPrompt={systemPrompt} onChangeSystemPrompt={setSystemPrompt} temperature={temperature} onChangeTemperature={setTemperature} maxTokens={maxTokens} onChangeMaxTokens={(value) => setMaxTokens(normaliseOutputTokens(value))} isFetchingModels={isFetchingModels} onSyncModels={handleSyncModels} onChangePin={() => { setIsLLMSettingsOpen(false); setPinGateMode('change'); setPinGateOpen(true); }} onOpenProtectedWorkspaceTools={() => setIsProtectedWorkspaceToolsOpen(true)} apiKeyPersistenceStatus={apiKeyPersistenceStatus} returnFocusRef={protectedSettingsTriggerRef} palette={palette} />
+   <AttachmentSourceSheet visible={isAttachmentSourceOpen} onClose={() => setIsAttachmentSourceOpen(false)} onDocument={handlePickFile} onCamera={handleAddCamera} onGallery={handleAddGallery} returnFocusRef={attachmentTriggerRef} palette={palette} />
+   <PdfReviewSheet visible={Boolean(pdfReview)} job={pdfReview?.job} selectedPages={pdfSelectedPages} onTogglePage={handleTogglePdfPage} onUse={handleUsePdfPages} onCancel={handleCancelPdfReview} returnFocusRef={attachmentTriggerRef} palette={palette} />
+diff -ru '--exclude=node_modules' /mnt/data/ai_console_work/extracted/AI_CONSOLE_V1_4_0_LLM_REMEDIATION_HANDOVER_ROOT_23082026185124/source/app.json ./app.json
+--- /mnt/data/ai_console_work/extracted/AI_CONSOLE_V1_4_0_LLM_REMEDIATION_HANDOVER_ROOT_23082026185124/source/app.json	2026-08-23 17:16:49.000000000 +0000
++++ ./app.json	2026-08-23 21:20:38.018230124 +0000
+@@ -5,8 +5,8 @@
+     "version": "1.4.0",
+     "orientation": "default",
+     "icon": "./assets/icon.png",
+-    "userInterfaceStyle": "automatic",
+-    "backgroundColor": "#09090b",
++    "userInterfaceStyle": "light",
++    "backgroundColor": "#f8fafc",
+     "assetBundlePatterns": [
+       "**/*"
+     ],
+@@ -16,7 +16,7 @@
+       "versionCode": 9,
+       "adaptiveIcon": {
+         "foregroundImage": "./assets/adaptive-icon.png",
+-        "backgroundColor": "#09090b"
++        "backgroundColor": "#f8fafc"
+       },
+       "permissions": [
+         "INTERNET"
+Only in .: docs
+Only in .: provenance
+Only in ./scripts: ci-version-guard.mjs
+diff -ru '--exclude=node_modules' /mnt/data/ai_console_work/extracted/AI_CONSOLE_V1_4_0_LLM_REMEDIATION_HANDOVER_ROOT_23082026185124/source/scripts/static-check.mjs ./scripts/static-check.mjs
+--- /mnt/data/ai_console_work/extracted/AI_CONSOLE_V1_4_0_LLM_REMEDIATION_HANDOVER_ROOT_23082026185124/source/scripts/static-check.mjs	2026-08-23 17:23:04.000000000 +0000
++++ ./scripts/static-check.mjs	2026-08-23 21:20:38.614751730 +0000
+@@ -1,10 +1,11 @@
+ import fs from 'node:fs'; import path from 'node:path'; import process from 'node:process';
+ const root=process.cwd(), read=(f)=>fs.readFileSync(path.join(root,f),'utf8'), json=(f)=>JSON.parse(read(f)), assert=(c,m)=>{if(!c)throw new Error(m)};
+ const pkg=json('package.json'),lock=json('package-lock.json'),app=json('app.json'),source=read('App.js'),readIf=(f)=>fs.existsSync(path.join(root,f))?read(f):'';
+-const workflow=read('../.github/workflows/android-apk.yml'),readme=read('README.md'),workspace=read('src/workspaces/workspaceSchema.mjs'),backup=read('src/backup/backupService.mjs'),storage=read('src/utils/storage.js'),project=read('src/export/projectArchive.mjs'),docProject=read('src/documents/documentProjectArchive.mjs'),docStudio=read('src/components/DocumentStudio.js'),docTarget=read('src/components/DocumentTargetSheet.js'),protectedTools=read('src/components/ProtectedWorkspaceTools.js'),bubble=read('src/components/MessageBubble.js'),messageActions=read('src/components/MessageActionSheet.js'),primitives=read('src/ui/primitives.js'),responsive=read('src/ui/responsive.mjs'),settings=read('src/components/SettingsSheet.js'),protectedSettings=read('src/components/LLMSettingsSheet.js');
++const workflow=readIf('.github/workflows/android-apk.yml') || readIf('../.github/workflows/android-apk.yml'),readme=read('README.md'),workspace=read('src/workspaces/workspaceSchema.mjs'),backup=read('src/backup/backupService.mjs'),storage=read('src/utils/storage.js'),project=read('src/export/projectArchive.mjs'),docProject=read('src/documents/documentProjectArchive.mjs'),docStudio=read('src/components/DocumentStudio.js'),docTarget=read('src/components/DocumentTargetSheet.js'),protectedTools=read('src/components/ProtectedWorkspaceTools.js'),bubble=read('src/components/MessageBubble.js'),messageActions=read('src/components/MessageActionSheet.js'),primitives=read('src/ui/primitives.js'),responsive=read('src/ui/responsive.mjs'),settings=read('src/components/SettingsSheet.js'),protectedSettings=read('src/components/LLMSettingsSheet.js');
+ assert(pkg.version==='1.4.0'&&lock.version==='1.4.0'&&lock.packages[''].version==='1.4.0','v1.4.0 package identity drift');
+ assert(app.expo.version==='1.4.0'&&app.expo.android.versionCode===9&&app.expo.android.package==='com.nexarenew.aiconsole','Expo/Android release identity drift');
+ assert(app.expo.orientation==='default'&&app.expo.android.softwareKeyboardLayoutMode==='resize','adaptive orientation/IME contract missing');
++assert(app.expo.userInterfaceStyle==='light'&&app.expo.backgroundColor==='#f8fafc','light-only app appearance contract missing');
+ assert(fs.existsSync(path.join(root,'.htaccess')),'.htaccess missing');
+ assert(readme.includes('AI Console v1.4.0')&&readme.includes('Document Studio Pro'),'README identity stale');
+ assert(workspace.includes('STORAGE_SCHEMA_VERSION_C = 4')&&workspace.includes('documentRevisions')&&workspace.includes('activeDocumentId'),'schema v4 documents missing');
+@@ -32,16 +33,17 @@
+ assert(settings.includes('Haptic feedback')&&settings.includes('minHeight: 48'),'haptic/touch target settings missing');
+ assert(protectedSettings.includes('apiKeyPersistenceStatus')&&protectedSettings.includes('Session only'),'SecureStore failure not surfaced');
+ assert(!settings.includes('OpenRouter API Key')&&!settings.includes('System prompt')&&!settings.includes('Select Model'),'protected AI configuration leaked into general settings');
+-assert(workflow.includes('working-directory: source')&&workflow.includes('cache-dependency-path: source/package-lock.json')&&workflow.includes('AI_Console_v1.4.0_production_apk')&&workflow.includes('source/android/app/build/outputs/apk/release/app-release.apk'),'CI path/artifact identity drift');
+-assert(!/uses:\s+actions\/[\w-]+@v\d/m.test(workflow),'mutable GitHub Action major tag remains');
++assert(workflow.includes('cache-dependency-path: package-lock.json')&&workflow.includes('AI_Console_v1.4.0_preview-debug-signed')&&workflow.includes('AI_Console_v1.4.0_production-release-signed')&&workflow.includes('android/app/build/outputs/apk/release/app-release.apk'),'CI path/artifact identity drift');
++assert(workflow.includes('actions/checkout@v4')&&workflow.includes('actions/setup-node@v4')&&workflow.includes('actions/setup-java@v4')&&workflow.includes('actions/upload-artifact@v4'),'current GitHub Actions major-version references missing');
+ 
+ assert(!source.includes("from 'expo-speech-recognition'")&&source.includes("require('expo-speech-recognition')")&&source.includes('getSpeechRecognitionModule'),'speech recognition must be lazily resolved behind a startup-safe capability guard');
+ assert(source.includes("import AppErrorBoundary from './src/components/AppErrorBoundary'")&&source.includes('<AppErrorBoundary><AIConsoleApp /></AppErrorBoundary>'),'root React error boundary missing');
+ assert(source.includes('Startup recovery mode: saved state could not be restored safely')&&source.includes('hydrationDegradedRef.current'),'startup hydration recovery/overwrite protection missing');
+ const speechPlugin=(app.expo.plugins||[]).find((entry)=>Array.isArray(entry)&&entry[0]==='expo-speech-recognition'); assert(speechPlugin?.[1]?.androidSpeechServicePackages?.includes('com.google.android.googlequicksearchbox')&&speechPlugin?.[1]?.androidSpeechServicePackages?.includes('com.google.android.tts'),'Android speech service package visibility is incomplete');
+-assert(workflow.includes('node-version: "24"')&&workflow.includes('expo install --check')&&workflow.includes('system-images;android-36;google_apis;x86_64')&&workflow.includes('AI Console process exited during cold-launch smoke test'),'SDK 57 Node/runtime launch CI gate missing');
+-assert(workflow.includes('zipalign')&&workflow.includes('-P 16'),'Android 16 KB APK alignment gate missing');
+-assert(workflow.includes('AI_CONSOLE_ANDROID_KEYSTORE_BASE64')&&workflow.includes('AI_CONSOLE_ANDROID_CERT_SHA256')&&workflow.includes('Signing certificate SHA-256 does not match')&&workflow.includes('Android Debug'),'production signing gate missing');
++assert(workflow.includes('node-version: ${{ env.NODE_VERSION }}')&&workflow.includes('NODE_VERSION: "24"')&&workflow.includes('expo install --check')&&workflow.includes('system-images;android-36;google_apis;x86_64')&&workflow.includes('AI Console process exited during cold-launch smoke test'),'SDK 57 Node/runtime launch CI gate missing');
++assert(workflow.includes('Release-critical test skip detected')&&workflow.includes('npm-test.txt'),'CI no-skip test gate missing');
++assert(workflow.includes('APK_ZIPALIGN_16K')&&workflow.includes('APK_NATIVE_ELF_16K')&&workflow.includes('EMULATOR_PAGE_SIZE_16K')&&workflow.includes('ANDROID_16_PROCESS_SURVIVAL')&&workflow.includes('zipalign')&&workflow.includes('-P 16')&&workflow.includes('readelf -lW'),'Android 16 KB/APK/native/runtime gate split missing');
++assert(workflow.includes('AI_CONSOLE_ANDROID_KEYSTORE_BASE64')&&workflow.includes('AI_CONSOLE_ANDROID_CERT_SHA256')&&workflow.includes('PRODUCTION_SIGNING_PREFLIGHT=FAIL')&&workflow.includes('Signing certificate SHA-256 does not match')&&workflow.includes('Android Debug'),'production signing gate missing');
+ const modalLiteralAnimations=[]; for(const name of fs.readdirSync(path.join(root,'src/components'))){if(!name.endsWith('.js'))continue;const body=read(`src/components/${name}`);if(/<Modal[^>]*animationType="(?:slide|fade)"/.test(body))modalLiteralAnimations.push(name);}assert(modalLiteralAnimations.length===0,`reduced-motion bypass remains in modals: ${modalLiteralAnimations.join(',')}`);
+ assert(primitives.includes("reduced?'none':'fade'")&&primitives.includes("reduced?'none':'slide'"),'shared modal reduced-motion contract missing');
+ assert(primitives.includes('useModalAccessibilityFocus')&&primitives.includes('setAccessibilityFocus')&&source.includes('announceForAccessibility'),'modal focus/screen announcement accessibility contract missing');
+diff -ru '--exclude=node_modules' /mnt/data/ai_console_work/extracted/AI_CONSOLE_V1_4_0_LLM_REMEDIATION_HANDOVER_ROOT_23082026185124/source/src/components/SettingsSheet.js ./src/components/SettingsSheet.js
+--- /mnt/data/ai_console_work/extracted/AI_CONSOLE_V1_4_0_LLM_REMEDIATION_HANDOVER_ROOT_23082026185124/source/src/components/SettingsSheet.js	2026-08-23 17:01:59.000000000 +0000
++++ ./src/components/SettingsSheet.js	2026-08-23 21:11:33.843752955 +0000
+@@ -9,7 +9,7 @@
+   const reducedMotion = useReducedMotion();
+   const modalTitleRef = useModalAccessibilityFocus(visible, returnFocusRef);
+   return <Modal visible={visible} animationType={reducedMotion ? 'none' : 'slide'} transparent onRequestClose={onClose}><View style={styles.backdrop}><TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close app settings" /><View style={styles.sheet} accessibilityViewIsModal><View style={styles.header}><Text ref={modalTitleRef} accessible accessibilityRole="header" style={styles.title}>App Settings</Text><TouchableOpacity style={styles.closeBtn} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close app settings"><IconClose color={palette.textMuted} /></TouchableOpacity></View><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+-    <View style={styles.row}><View><Text style={styles.rowTitle}>Light appearance</Text><Text style={styles.rowDetail}>Use a higher-contrast light interface.</Text></View><Switch value={colorMode === 'light'} onValueChange={onToggleColorMode} accessibilityLabel="Toggle light appearance" /></View>
++    <View style={styles.row}><View><Text style={styles.rowTitle}>Light appearance</Text><Text style={styles.rowDetail}>Locked on for this release; no dark mode is exposed.</Text></View><Text style={styles.localeText} accessibilityLabel="Light appearance locked on">On</Text></View>
+     <View style={styles.row}><View><Text style={styles.rowTitle}>Speech locale</Text><Text style={styles.rowDetail}>Current device transcription locale: {voiceLocale}.</Text></View><TouchableOpacity style={styles.localeButton} onPress={() => onChangeVoiceLocale(voiceLocale === 'en-GB' ? 'en-US' : 'en-GB')} accessibilityRole="button"><Text style={styles.localeText}>Change</Text></TouchableOpacity></View>
+     <View style={styles.row}><View><Text style={styles.rowTitle}>Haptic feedback</Text><Text style={styles.rowDetail}>Use restrained tactile feedback for selected confirmations and navigation actions.</Text></View><Switch value={hapticsEnabled} onValueChange={onToggleHaptics} accessibilityLabel="Toggle haptic feedback" /></View>
+     <View style={styles.row}><View><Text style={styles.rowTitle}>TTS playback speed</Text><Text style={styles.rowDetail}>Device/media setting: {Number(playbackSpeed).toFixed(1)}×. This does not change model behaviour.</Text></View><TouchableOpacity style={styles.localeButton} onPress={() => onChangePlaybackSpeed(playbackSpeed >= 1.5 ? 0.8 : Number((playbackSpeed + 0.1).toFixed(1)))} accessibilityRole="button"><Text style={styles.localeText}>Change</Text></TouchableOpacity></View>
+diff -ru '--exclude=node_modules' /mnt/data/ai_console_work/extracted/AI_CONSOLE_V1_4_0_LLM_REMEDIATION_HANDOVER_ROOT_23082026185124/source/tests/packageC.test.mjs ./tests/packageC.test.mjs
+--- /mnt/data/ai_console_work/extracted/AI_CONSOLE_V1_4_0_LLM_REMEDIATION_HANDOVER_ROOT_23082026185124/source/tests/packageC.test.mjs	2026-08-23 17:01:59.000000000 +0000
++++ ./tests/packageC.test.mjs	2026-08-23 21:19:07.117644240 +0000
+@@ -1,6 +1,11 @@
+ import test from 'node:test';
+ import assert from 'node:assert/strict';
+-let JSZip = null; try { JSZip = (await import('jszip')).default; } catch (_) { /* exact dependency unavailable in this execution environment */ }
++let JSZip;
++try {
++  JSZip = (await import('jszip')).default;
++} catch (error) {
++  throw new Error(`jszip dependency is required for release-critical ZIP/package tests: ${error?.message || error}`);
++}
+ import { migratePackageAToB } from '../src/domain/conversationSchema.mjs';
+ import { addWorkspace, archiveWorkspace, deleteWorkspace, migrateBToC, normaliseCState, renameWorkspace, workspaceChats } from '../src/workspaces/workspaceSchema.mjs';
+ import { addPrompt, createPrompt, duplicatePrompt, expandPromptVariables, requireProtectedPromptAccess, searchPrompts, updatePrompt } from '../src/prompts/promptLibrary.mjs';
+@@ -129,7 +134,7 @@
+   assert.equal(pdfFilename({ title: 'Brief' }, PDF_LAYOUTS.COMPACT), 'Brief_compact.pdf');
+ });
+ 
+-test('local document ZIP bundles safe current-chat formats with an integrity manifest', { skip: !JSZip ? 'jszip dependency unavailable in execution environment' : false }, async () => {
++test('local document ZIP bundles safe current-chat formats with an integrity manifest', async () => {
+   const chat = { id: 'zip-chat', title: 'ZIP Chat', messages: [] };
+   const messages = [{ role: 'user', content: 'Visible content', apiContent: 'hidden request payload', transientContext: 'hidden context' }];
+   const base64 = await createChatDocumentArchive(chat, messages, '2026-01-01T00:00:00.000Z');
+@@ -158,7 +163,7 @@
+   assert.throws(() => validateOrdinaryBackup({ ...backup, payload: { ...backup.payload, apiKey: 'no' } }), /prohibited/);
+ });
+ 
+-test('project archive round trip protects secrets/transient context and validates integrity', { skip: !JSZip ? 'jszip dependency unavailable in execution environment' : false }, async () => {
++test('project archive round trip protects secrets/transient context and validates integrity', async () => {
+   const c = migrateBToC(bState, 200);
+   const bytes = await createProjectArchive(c, 'workspace-default');
+   const parsed = await parseProjectArchive(bytes);
+diff -ru '--exclude=node_modules' /mnt/data/ai_console_work/extracted/AI_CONSOLE_V1_4_0_LLM_REMEDIATION_HANDOVER_ROOT_23082026185124/source/tests/startupRuntimeResilience.test.mjs ./tests/startupRuntimeResilience.test.mjs
+--- /mnt/data/ai_console_work/extracted/AI_CONSOLE_V1_4_0_LLM_REMEDIATION_HANDOVER_ROOT_23082026185124/source/tests/startupRuntimeResilience.test.mjs	2026-08-23 17:23:34.000000000 +0000
++++ ./tests/startupRuntimeResilience.test.mjs	2026-08-23 21:11:45.854908673 +0000
+@@ -4,7 +4,9 @@
+ 
+ const appSource = fs.readFileSync(new URL('../App.js', import.meta.url), 'utf8');
+ const appConfig = JSON.parse(fs.readFileSync(new URL('../app.json', import.meta.url), 'utf8'));
+-const workflow = fs.readFileSync(new URL('../../.github/workflows/android-apk.yml', import.meta.url), 'utf8');
++const workflowPath = new URL('../.github/workflows/android-apk.yml', import.meta.url);
++const legacyWorkflowPath = new URL('../../.github/workflows/android-apk.yml', import.meta.url);
++const workflow = fs.readFileSync(fs.existsSync(workflowPath) ? workflowPath : legacyWorkflowPath, 'utf8');
+ const errorBoundarySource = fs.readFileSync(new URL('../src/components/AppErrorBoundary.js', import.meta.url), 'utf8');
+ 
+ 
+@@ -36,8 +38,12 @@
+ });
+ 
+ test('CI verifies SDK 57 tooling, 16 KB alignment and actual cold launch', () => {
+-  assert.match(workflow, /node-version: \"24\"/);
++  assert.match(workflow, /NODE_VERSION: \"24\"/);
+   assert.match(workflow, /expo install --check/);
++  assert.match(workflow, /APK_ZIPALIGN_16K/);
++  assert.match(workflow, /APK_NATIVE_ELF_16K/);
++  assert.match(workflow, /EMULATOR_PAGE_SIZE_16K/);
++  assert.match(workflow, /ANDROID_16_PROCESS_SURVIVAL/);
+   assert.match(workflow, /zipalign/);
+   assert.match(workflow, /-P 16/);
+   assert.match(workflow, /system-images;android-36;google_apis;x86_64/);
