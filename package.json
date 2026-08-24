@@ -35,7 +35,8 @@
     "react-native-svg": "15.15.4",
     "expo-image-picker": "57.0.12",
     "expo-speech": "57.0.1",
-    "pako": "1.0.11"
+    "pako": "1.0.11",
+    "expo-build-properties": "~0.14.8"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
