@@ -18,7 +18,7 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/slider": "5.2.0",
     "expo": "~57.0.15",
-    "expo-build-properties": "^0.14.8",
+    "expo-build-properties": "~57.0.13",
     "expo-clipboard": "~57.0.1",
     "expo-constants": "~57.0.13",
     "expo-document-picker": "~57.0.1",
