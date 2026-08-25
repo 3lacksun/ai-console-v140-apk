@@ -1,0 +1,872 @@
+ai-console@1.4.2 /mnt/data/aiconsole_v142_remediate/work
++-- @babel/code-frame@ extraneous
++-- @babel/compat-data@ extraneous
++-- @babel/core@ invalid: "^7.24.0" from the root project
++-- @babel/generator@ extraneous
++-- @babel/helper-annotate-as-pure@ extraneous
++-- @babel/helper-compilation-targets@ extraneous
++-- @babel/helper-create-class-features-plugin@ extraneous
++-- @babel/helper-create-regexp-features-plugin@ extraneous
++-- @babel/helper-define-polyfill-provider@ extraneous
++-- @babel/helper-globals@ extraneous
++-- @babel/helper-member-expression-to-functions@ extraneous
++-- @babel/helper-module-imports@ extraneous
++-- @babel/helper-module-transforms@ extraneous
++-- @babel/helper-optimise-call-expression@ extraneous
++-- @babel/helper-plugin-utils@ extraneous
++-- @babel/helper-remap-async-to-generator@ extraneous
++-- @babel/helper-replace-supers@ extraneous
++-- @babel/helper-skip-transparent-expression-wrappers@ extraneous
++-- @babel/helper-string-parser@ extraneous
++-- @babel/helper-validator-identifier@ extraneous
++-- @babel/helper-validator-option@ extraneous
++-- @babel/helper-wrap-function@ extraneous
++-- @babel/helpers@ extraneous
++-- @babel/parser@ extraneous
++-- @babel/plugin-proposal-decorators@ extraneous
++-- @babel/plugin-proposal-export-default-from@ extraneous
++-- @babel/plugin-syntax-decorators@ extraneous
++-- @babel/plugin-syntax-dynamic-import@ extraneous
++-- @babel/plugin-syntax-export-default-from@ extraneous
++-- @babel/plugin-syntax-flow@ extraneous
++-- @babel/plugin-syntax-jsx@ extraneous
++-- @babel/plugin-syntax-nullish-coalescing-operator@ extraneous
++-- @babel/plugin-syntax-optional-chaining@ extraneous
++-- @babel/plugin-syntax-typescript@ extraneous
++-- @babel/plugin-transform-async-generator-functions@ extraneous
++-- @babel/plugin-transform-async-to-generator@ extraneous
++-- @babel/plugin-transform-block-scoping@ extraneous
++-- @babel/plugin-transform-class-properties@ extraneous
++-- @babel/plugin-transform-class-static-block@ extraneous
++-- @babel/plugin-transform-classes@ extraneous
++-- @babel/plugin-transform-destructuring@ extraneous
++-- @babel/plugin-transform-export-namespace-from@ extraneous
++-- @babel/plugin-transform-flow-strip-types@ extraneous
++-- @babel/plugin-transform-for-of@ extraneous
++-- @babel/plugin-transform-logical-assignment-operators@ extraneous
++-- @babel/plugin-transform-modules-commonjs@ extraneous
++-- @babel/plugin-transform-named-capturing-groups-regex@ extraneous
++-- @babel/plugin-transform-nullish-coalescing-operator@ extraneous
++-- @babel/plugin-transform-object-rest-spread@ extraneous
++-- @babel/plugin-transform-optional-catch-binding@ extraneous
++-- @babel/plugin-transform-optional-chaining@ extraneous
++-- @babel/plugin-transform-parameters@ extraneous
++-- @babel/plugin-transform-private-methods@ extraneous
++-- @babel/plugin-transform-private-property-in-object@ extraneous
++-- @babel/plugin-transform-react-display-name@ extraneous
++-- @babel/plugin-transform-react-jsx-development@ extraneous
++-- @babel/plugin-transform-react-jsx@ extraneous
++-- @babel/plugin-transform-react-pure-annotations@ extraneous
++-- @babel/plugin-transform-runtime@ extraneous
++-- @babel/plugin-transform-typescript@ extraneous
++-- @babel/plugin-transform-unicode-regex@ extraneous
++-- @babel/preset-typescript@ extraneous
++-- @babel/runtime@ extraneous
++-- @babel/template@ extraneous
++-- @babel/traverse@ extraneous
++-- @babel/types@ extraneous
++-- @expo/code-signing-certificates@ extraneous
++-- @expo/config-plugins@ extraneous
++-- @expo/config-types@ extraneous
++-- @expo/config@ extraneous
++-- @expo/devcert@ extraneous
++-- @expo/devtools@ extraneous
++-- @expo/env@ extraneous
++-- @expo/expo-modules-macros-plugin@ extraneous
++-- @expo/fingerprint@ extraneous
++-- @expo/image-utils@ extraneous
++-- @expo/inline-modules@ extraneous
++-- @expo/json-file@ extraneous
++-- @expo/local-build-cache-provider@ extraneous
++-- @expo/metro-file-map@ extraneous
++-- @expo/metro@ extraneous
++-- @expo/osascript@ extraneous
++-- @expo/package-manager@ extraneous
++-- @expo/plist@ extraneous
++-- @expo/prebuild-config@ extraneous
++-- @expo/require-utils@ extraneous
++-- @expo/schema-utils@ extraneous
++-- @expo/sdk-runtime-versions@ extraneous
++-- @expo/spawn-async@ extraneous
++-- @expo/sudo-prompt@ extraneous
++-- @expo/xcpretty@ extraneous
++-- @isaacs/ttlcache@ extraneous
++-- @jest/schemas@ extraneous
++-- @jridgewell/gen-mapping@ extraneous
++-- @jridgewell/remapping@ extraneous
++-- @jridgewell/resolve-uri@ extraneous
++-- @jridgewell/source-map@ extraneous
++-- @jridgewell/sourcemap-codec@ extraneous
++-- @jridgewell/trace-mapping@ extraneous
++-- @react-native-async-storage/async-storage@ invalid: "2.2.0" from the root project
++-- @react-native-community/slider@ invalid: "5.2.0" from the root project
++-- @react-native/assets-registry@ extraneous
++-- @react-native/babel-plugin-codegen@ extraneous
++-- @react-native/codegen@ extraneous
++-- @react-native/community-cli-plugin@ extraneous
++-- @react-native/debugger-frontend@ extraneous
++-- @react-native/debugger-shell@ extraneous
++-- @react-native/dev-middleware@ extraneous
++-- @react-native/gradle-plugin@ extraneous
++-- @react-native/js-polyfills@ extraneous
++-- @react-native/normalize-colors@ extraneous
++-- @react-native/virtualized-lists@ extraneous
++-- @sinclair/typebox@ extraneous
++-- @types/istanbul-lib-coverage@ extraneous
++-- @types/istanbul-lib-report@ extraneous
++-- @types/node@ extraneous
++-- @types/yargs-parser@ extraneous
++-- @ungap/structured-clone@ extraneous
++-- @xmldom/xmldom@ extraneous
++-- abort-controller@ extraneous
++-- accepts@ extraneous
++-- acorn@ extraneous
++-- agent-base@ extraneous
++-- agent-cli-detector@ extraneous
++-- anser@ extraneous
++-- ansi-escapes@ extraneous
++-- ansi-regex@ extraneous
++-- ansi-styles@ extraneous
++-- arg@ extraneous
++-- argparse@ extraneous
++-- asap@ extraneous
++-- babel-plugin-polyfill-corejs2@ extraneous
++-- babel-plugin-polyfill-corejs3@ extraneous
++-- babel-plugin-polyfill-regenerator@ extraneous
++-- babel-plugin-react-compiler@ extraneous
++-- babel-plugin-react-native-web@ extraneous
++-- babel-plugin-syntax-hermes-parser@ extraneous
++-- babel-plugin-transform-flow-enums@ extraneous
++-- babel-preset-expo@ invalid: "~57.0.0" from the root project
++-- balanced-match@ extraneous
++-- base64-js@ extraneous
++-- baseline-browser-mapping@ extraneous
++-- big-integer@ extraneous
++-- boolbase@ extraneous
++-- bplist-creator@ extraneous
++-- bplist-parser@ extraneous
++-- brace-expansion@ extraneous
++-- braces@ extraneous
++-- browserslist@ extraneous
++-- bser@ extraneous
++-- buffer-from@ extraneous
++-- bytes@ extraneous
++-- camelcase@ extraneous
++-- caniuse-lite@ extraneous
++-- chalk@ extraneous
++-- chrome-launcher@ extraneous
++-- chromium-edge-launcher@ extraneous
++-- ci-info@ extraneous
++-- cli-cursor@ extraneous
++-- cli-spinners@ extraneous
++-- cliui@ extraneous
++-- clone@ extraneous
++-- color-convert@ extraneous
++-- color-name@ extraneous
++-- commander@ extraneous
++-- compressible@ extraneous
++-- compression@ extraneous
++-- connect@ extraneous
++-- content-type@ extraneous
++-- convert-source-map@ extraneous
++-- core-js-compat@ extraneous
++-- core-util-is@ extraneous
++-- cross-spawn@ extraneous
++-- css-select@ extraneous
++-- css-tree@ extraneous
++-- css-what@ extraneous
++-- debug@ extraneous
++-- deepmerge@ extraneous
++-- defaults@ extraneous
++-- depd@ extraneous
++-- destroy@ extraneous
++-- detect-libc@ extraneous
++-- dnssd-advertise@ extraneous
++-- dom-serializer@ extraneous
++-- domelementtype@ extraneous
++-- domhandler@ extraneous
++-- domutils@ extraneous
++-- ee-first@ extraneous
++-- electron-to-chromium@ extraneous
++-- emoji-regex@ extraneous
++-- encodeurl@ extraneous
++-- entities@ extraneous
++-- error-stack-parser@ extraneous
++-- es-errors@ extraneous
++-- escalade@ extraneous
++-- escape-html@ extraneous
++-- escape-string-regexp@ extraneous
++-- etag@ extraneous
++-- event-target-shim@ extraneous
++-- expo-clipboard@ invalid: "~57.0.1" from the root project
++-- expo-constants@ invalid: "~57.0.13" from the root project
++-- expo-document-picker@ invalid: "~57.0.1" from the root project
++-- expo-file-system@ invalid: "~57.0.5" from the root project
++-- expo-image-loader@ extraneous
++-- expo-image-picker@ invalid: "57.0.12" from the root project
++-- expo-modules-autolinking@ extraneous
++-- expo-modules-core@ extraneous
++-- expo-modules-jsi@ extraneous
++-- expo-print@ invalid: "~57.0.1" from the root project
++-- expo-secure-store@ invalid: "~57.0.1" from the root project
++-- expo-server@ extraneous
++-- expo-sharing@ invalid: "~57.0.14" from the root project
++-- expo-speech-recognition@ invalid: "^56.0.1" from the root project
++-- expo-speech@ invalid: "57.0.1" from the root project
++-- expo-splash-screen@ invalid: "~57.0.7" from the root project
++-- expo-status-bar@ invalid: "~57.0.1" from the root project
++-- expo@ invalid: "~57.0.15" from the root project
++-- exponential-backoff@ extraneous
++-- fb-dotslash@ extraneous
++-- fb-watchman@ extraneous
++-- fdir@ extraneous
++-- fetch-nodeshim@ extraneous
++-- fill-range@ extraneous
++-- finalhandler@ extraneous
++-- flow-enums-runtime@ extraneous
++-- fontfaceobserver@ extraneous
++-- fresh@ extraneous
++-- function-bind@ extraneous
++-- gensync@ extraneous
++-- get-caller-file@ extraneous
++-- getenv@ extraneous
++-- glob@ extraneous
++-- graceful-fs@ extraneous
++-- has-flag@ extraneous
++-- hasown@ extraneous
++-- hermes-compiler@ extraneous
++-- hermes-estree@ extraneous
++-- hermes-parser@ extraneous
++-- hosted-git-info@ extraneous
++-- http-errors@ extraneous
++-- https-proxy-agent@ extraneous
++-- ignore@ extraneous
++-- immediate@ extraneous
++-- inherits@ extraneous
++-- invariant@ extraneous
++-- is-core-module@ extraneous
++-- is-docker@ extraneous
++-- is-number@ extraneous
++-- is-plain-obj@ extraneous
++-- is-wsl@ extraneous
++-- isarray@ extraneous
++-- isexe@ extraneous
++-- jest-get-type@ extraneous
++-- jest-util@ extraneous
++-- jest-validate@ extraneous
++-- jest-worker@ extraneous
++-- jimp-compact@ extraneous
++-- js-tokens@ extraneous
++-- js-yaml@ extraneous
++-- jsc-safe-url@ extraneous
++-- jsesc@ extraneous
++-- json5@ extraneous
++-- jszip@ invalid: "^3.10.1" from the root project
++-- kleur@ extraneous
++-- lan-network@ extraneous
++-- leven@ extraneous
++-- lie@ extraneous
++-- lighthouse-logger@ extraneous
++-- lightningcss-android-arm64@ extraneous
++-- lightningcss-darwin-arm64@ extraneous
++-- lightningcss-darwin-x64@ extraneous
++-- lightningcss-freebsd-x64@ extraneous
++-- lightningcss-linux-arm-gnueabihf@ extraneous
++-- lightningcss-linux-arm64-gnu@ extraneous
++-- lightningcss-linux-arm64-musl@ extraneous
++-- lightningcss-linux-x64-gnu@ extraneous
++-- lightningcss-linux-x64-musl@ extraneous
++-- lightningcss-win32-arm64-msvc@ extraneous
++-- lightningcss-win32-x64-msvc@ extraneous
++-- lightningcss@ extraneous
++-- lodash.debounce@ extraneous
++-- lodash.throttle@ extraneous
++-- log-symbols@ extraneous
++-- loose-envify@ extraneous
++-- lru-cache@ extraneous
++-- makeerror@ extraneous
++-- marky@ extraneous
++-- mdn-data@ extraneous
++-- memoize-one@ extraneous
++-- merge-options@ extraneous
++-- merge-stream@ extraneous
++-- metro-babel-transformer@ extraneous
++-- metro-cache-key@ extraneous
++-- metro-cache@ extraneous
++-- metro-config@ extraneous
++-- metro-core@ extraneous
++-- metro-file-map@ extraneous
++-- metro-minify-terser@ extraneous
++-- metro-resolver@ extraneous
++-- metro-runtime@ extraneous
++-- metro-source-map@ extraneous
++-- metro-symbolicate@ extraneous
++-- metro-transform-plugins@ extraneous
++-- metro-transform-worker@ extraneous
++-- metro@ extraneous
++-- micromatch@ extraneous
++-- mime-db@ extraneous
++-- mime-types@ extraneous
++-- mime@ extraneous
++-- mimic-fn@ extraneous
++-- minimatch@ extraneous
++-- minipass@ extraneous
++-- mkdirp@ extraneous
++-- ms@ extraneous
++-- multitars@ extraneous
++-- nanoid@ extraneous
++-- negotiator@ extraneous
++-- node-forge@ extraneous
++-- node-int64@ extraneous
++-- node-releases@ extraneous
++-- npm-package-arg@ extraneous
++-- nth-check@ extraneous
++-- nullthrows@ extraneous
++-- ob1@ extraneous
++-- on-finished@ extraneous
++-- on-headers@ extraneous
++-- onetime@ extraneous
++-- open@ extraneous
++-- ora@ extraneous
++-- pako@ invalid: "1.0.11" from the root project
++-- parse-png@ extraneous
++-- parseurl@ extraneous
++-- path-key@ extraneous
++-- path-parse@ extraneous
++-- path-scurry@ extraneous
++-- picocolors@ extraneous
++-- picomatch@ extraneous
++-- plist@ extraneous
++-- pngjs@ extraneous
++-- postcss@ extraneous
++-- pretty-format@ extraneous
++-- proc-log@ extraneous
++-- process-nextick-args@ extraneous
++-- progress@ extraneous
++-- prompts@ extraneous
++-- range-parser@ extraneous
++-- react-devtools-core@ extraneous
++-- react-is@ extraneous
++-- react-native-safe-area-context@ invalid: "~5.7.0" from the root project
++-- react-native-svg@ invalid: "15.15.4" from the root project
++-- react-native@ invalid: "0.86.2" from the root project
++-- react-refresh@ extraneous
++-- react@ invalid: "19.2.3" from the root project
++-- readable-stream@ extraneous
++-- regenerate-unicode-properties@ extraneous
++-- regenerate@ extraneous
++-- regenerator-runtime@ extraneous
++-- regexpu-core@ extraneous
++-- regjsgen@ extraneous
++-- regjsparser@ extraneous
++-- require-directory@ extraneous
++-- resolve-from@ extraneous
++-- resolve-workspace-root@ extraneous
++-- resolve@ extraneous
++-- restore-cursor@ extraneous
++-- safe-buffer@ extraneous
++-- sandbox-cli-detector@ extraneous
++-- sax@ extraneous
++-- scheduler@ extraneous
++-- semver@ extraneous
++-- send@ extraneous
++-- serialize-error@ extraneous
++-- serve-static@ extraneous
++-- setimmediate@ extraneous
++-- setprototypeof@ extraneous
++-- shebang-command@ extraneous
++-- shebang-regex@ extraneous
++-- shell-quote@ extraneous
++-- signal-exit@ extraneous
++-- simple-plist@ extraneous
++-- sisteransi@ extraneous
++-- slugify@ extraneous
++-- source-map-js@ extraneous
++-- source-map-support@ extraneous
++-- source-map@ extraneous
++-- stackframe@ extraneous
++-- stacktrace-parser@ extraneous
++-- statuses@ extraneous
++-- stream-buffers@ extraneous
++-- string_decoder@ extraneous
++-- string-width@ extraneous
++-- strip-ansi@ extraneous
++-- structured-headers@ extraneous
++-- supports-color@ extraneous
++-- supports-hyperlinks@ extraneous
++-- supports-preserve-symlinks-flag@ extraneous
++-- terminal-link@ extraneous
++-- terser@ extraneous
++-- throat@ extraneous
++-- tinyglobby@ extraneous
++-- tmpl@ extraneous
++-- to-regex-range@ extraneous
++-- toidentifier@ extraneous
++-- toqr@ extraneous
++-- type-fest@ extraneous
++-- undici-types@ extraneous
++-- unicode-canonical-property-names-ecmascript@ extraneous
++-- unicode-match-property-ecmascript@ extraneous
++-- unicode-match-property-value-ecmascript@ extraneous
++-- unicode-property-aliases-ecmascript@ extraneous
++-- unpipe@ extraneous
++-- update-browserslist-db@ extraneous
++-- util-deprecate@ extraneous
++-- utils-merge@ extraneous
++-- validate-npm-package-name@ extraneous
++-- vary@ extraneous
++-- vlq@ extraneous
++-- walker@ extraneous
++-- warn-once@ extraneous
++-- wcwidth@ extraneous
++-- whatwg-fetch@ extraneous
++-- whatwg-url-minimum@ extraneous
++-- which@ extraneous
++-- wrap-ansi@ extraneous
++-- ws@ extraneous
++-- xcode@ extraneous
++-- xml2js@ extraneous
++-- xmlbuilder@ extraneous
++-- y18n@ extraneous
++-- yallist@ extraneous
++-- yaml@ extraneous
++-- yargs-parser@ extraneous
++-- yargs@ extraneous
+`-- zod@ extraneous
+
+npm error code ELSPROBLEMS
+npm error extraneous: @babel/code-frame@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/code-frame
+npm error extraneous: @babel/compat-data@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/compat-data
+npm error invalid: @babel/core@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/core
+npm error extraneous: @babel/generator@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/generator
+npm error extraneous: @babel/helper-annotate-as-pure@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/helper-annotate-as-pure
+npm error extraneous: @babel/helper-compilation-targets@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/helper-compilation-targets
+npm error extraneous: @babel/helper-create-class-features-plugin@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/helper-create-class-features-plugin
+npm error extraneous: @babel/helper-create-regexp-features-plugin@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/helper-create-regexp-features-plugin
+npm error extraneous: @babel/helper-define-polyfill-provider@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/helper-define-polyfill-provider
+npm error extraneous: @babel/helper-globals@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/helper-globals
+npm error extraneous: @babel/helper-member-expression-to-functions@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/helper-member-expression-to-functions
+npm error extraneous: @babel/helper-module-imports@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/helper-module-imports
+npm error extraneous: @babel/helper-module-transforms@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/helper-module-transforms
+npm error extraneous: @babel/helper-optimise-call-expression@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/helper-optimise-call-expression
+npm error extraneous: @babel/helper-plugin-utils@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/helper-plugin-utils
+npm error extraneous: @babel/helper-remap-async-to-generator@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/helper-remap-async-to-generator
+npm error extraneous: @babel/helper-replace-supers@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/helper-replace-supers
+npm error extraneous: @babel/helper-skip-transparent-expression-wrappers@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/helper-skip-transparent-expression-wrappers
+npm error extraneous: @babel/helper-string-parser@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/helper-string-parser
+npm error extraneous: @babel/helper-validator-identifier@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/helper-validator-identifier
+npm error extraneous: @babel/helper-validator-option@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/helper-validator-option
+npm error extraneous: @babel/helper-wrap-function@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/helper-wrap-function
+npm error extraneous: @babel/helpers@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/helpers
+npm error extraneous: @babel/parser@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/parser
+npm error extraneous: @babel/plugin-proposal-decorators@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-proposal-decorators
+npm error extraneous: @babel/plugin-proposal-export-default-from@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-proposal-export-default-from
+npm error extraneous: @babel/plugin-syntax-decorators@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-syntax-decorators
+npm error extraneous: @babel/plugin-syntax-dynamic-import@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-syntax-dynamic-import
+npm error extraneous: @babel/plugin-syntax-export-default-from@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-syntax-export-default-from
+npm error extraneous: @babel/plugin-syntax-flow@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-syntax-flow
+npm error extraneous: @babel/plugin-syntax-jsx@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-syntax-jsx
+npm error extraneous: @babel/plugin-syntax-nullish-coalescing-operator@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-syntax-nullish-coalescing-operator
+npm error extraneous: @babel/plugin-syntax-optional-chaining@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-syntax-optional-chaining
+npm error extraneous: @babel/plugin-syntax-typescript@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-syntax-typescript
+npm error extraneous: @babel/plugin-transform-async-generator-functions@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-async-generator-functions
+npm error extraneous: @babel/plugin-transform-async-to-generator@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-async-to-generator
+npm error extraneous: @babel/plugin-transform-block-scoping@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-block-scoping
+npm error extraneous: @babel/plugin-transform-class-properties@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-class-properties
+npm error extraneous: @babel/plugin-transform-class-static-block@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-class-static-block
+npm error extraneous: @babel/plugin-transform-classes@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-classes
+npm error extraneous: @babel/plugin-transform-destructuring@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-destructuring
+npm error extraneous: @babel/plugin-transform-export-namespace-from@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-export-namespace-from
+npm error extraneous: @babel/plugin-transform-flow-strip-types@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-flow-strip-types
+npm error extraneous: @babel/plugin-transform-for-of@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-for-of
+npm error extraneous: @babel/plugin-transform-logical-assignment-operators@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-logical-assignment-operators
+npm error extraneous: @babel/plugin-transform-modules-commonjs@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-modules-commonjs
+npm error extraneous: @babel/plugin-transform-named-capturing-groups-regex@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-named-capturing-groups-regex
+npm error extraneous: @babel/plugin-transform-nullish-coalescing-operator@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-nullish-coalescing-operator
+npm error extraneous: @babel/plugin-transform-object-rest-spread@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-object-rest-spread
+npm error extraneous: @babel/plugin-transform-optional-catch-binding@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-optional-catch-binding
+npm error extraneous: @babel/plugin-transform-optional-chaining@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-optional-chaining
+npm error extraneous: @babel/plugin-transform-parameters@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-parameters
+npm error extraneous: @babel/plugin-transform-private-methods@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-private-methods
+npm error extraneous: @babel/plugin-transform-private-property-in-object@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-private-property-in-object
+npm error extraneous: @babel/plugin-transform-react-display-name@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-react-display-name
+npm error extraneous: @babel/plugin-transform-react-jsx-development@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-react-jsx-development
+npm error extraneous: @babel/plugin-transform-react-jsx@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-react-jsx
+npm error extraneous: @babel/plugin-transform-react-pure-annotations@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-react-pure-annotations
+npm error extraneous: @babel/plugin-transform-runtime@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-runtime
+npm error extraneous: @babel/plugin-transform-typescript@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-typescript
+npm error extraneous: @babel/plugin-transform-unicode-regex@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/plugin-transform-unicode-regex
+npm error extraneous: @babel/preset-typescript@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/preset-typescript
+npm error extraneous: @babel/runtime@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/runtime
+npm error extraneous: @babel/template@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/template
+npm error extraneous: @babel/traverse@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/traverse
+npm error extraneous: @babel/types@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@babel/types
+npm error extraneous: @expo/code-signing-certificates@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/code-signing-certificates
+npm error extraneous: @expo/config-plugins@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/config-plugins
+npm error extraneous: @expo/config-types@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/config-types
+npm error extraneous: @expo/config@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/config
+npm error extraneous: @expo/devcert@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/devcert
+npm error extraneous: @expo/devtools@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/devtools
+npm error extraneous: @expo/env@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/env
+npm error extraneous: @expo/expo-modules-macros-plugin@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/expo-modules-macros-plugin
+npm error extraneous: @expo/fingerprint@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/fingerprint
+npm error extraneous: @expo/image-utils@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/image-utils
+npm error extraneous: @expo/inline-modules@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/inline-modules
+npm error extraneous: @expo/json-file@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/json-file
+npm error extraneous: @expo/local-build-cache-provider@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/local-build-cache-provider
+npm error extraneous: @expo/metro-file-map@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/metro-file-map
+npm error extraneous: @expo/metro@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/metro
+npm error extraneous: @expo/osascript@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/osascript
+npm error extraneous: @expo/package-manager@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/package-manager
+npm error extraneous: @expo/plist@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/plist
+npm error extraneous: @expo/prebuild-config@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/prebuild-config
+npm error extraneous: @expo/require-utils@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/require-utils
+npm error extraneous: @expo/schema-utils@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/schema-utils
+npm error extraneous: @expo/sdk-runtime-versions@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/sdk-runtime-versions
+npm error extraneous: @expo/spawn-async@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/spawn-async
+npm error extraneous: @expo/sudo-prompt@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/sudo-prompt
+npm error extraneous: @expo/xcpretty@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@expo/xcpretty
+npm error extraneous: @isaacs/ttlcache@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@isaacs/ttlcache
+npm error extraneous: @jest/schemas@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@jest/schemas
+npm error extraneous: @jridgewell/gen-mapping@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@jridgewell/gen-mapping
+npm error extraneous: @jridgewell/remapping@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@jridgewell/remapping
+npm error extraneous: @jridgewell/resolve-uri@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@jridgewell/resolve-uri
+npm error extraneous: @jridgewell/source-map@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@jridgewell/source-map
+npm error extraneous: @jridgewell/sourcemap-codec@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@jridgewell/sourcemap-codec
+npm error extraneous: @jridgewell/trace-mapping@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@jridgewell/trace-mapping
+npm error invalid: @react-native-async-storage/async-storage@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@react-native-async-storage/async-storage
+npm error invalid: @react-native-community/slider@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@react-native-community/slider
+npm error extraneous: @react-native/assets-registry@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@react-native/assets-registry
+npm error extraneous: @react-native/babel-plugin-codegen@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@react-native/babel-plugin-codegen
+npm error extraneous: @react-native/codegen@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@react-native/codegen
+npm error extraneous: @react-native/community-cli-plugin@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@react-native/community-cli-plugin
+npm error extraneous: @react-native/debugger-frontend@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@react-native/debugger-frontend
+npm error extraneous: @react-native/debugger-shell@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@react-native/debugger-shell
+npm error extraneous: @react-native/dev-middleware@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@react-native/dev-middleware
+npm error extraneous: @react-native/gradle-plugin@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@react-native/gradle-plugin
+npm error extraneous: @react-native/js-polyfills@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@react-native/js-polyfills
+npm error extraneous: @react-native/normalize-colors@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@react-native/normalize-colors
+npm error extraneous: @react-native/virtualized-lists@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@react-native/virtualized-lists
+npm error extraneous: @sinclair/typebox@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@sinclair/typebox
+npm error extraneous: @types/istanbul-lib-coverage@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@types/istanbul-lib-coverage
+npm error extraneous: @types/istanbul-lib-report@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@types/istanbul-lib-report
+npm error extraneous: @types/node@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@types/node
+npm error extraneous: @types/yargs-parser@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@types/yargs-parser
+npm error extraneous: @ungap/structured-clone@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@ungap/structured-clone
+npm error extraneous: @xmldom/xmldom@ /mnt/data/aiconsole_v142_remediate/work/node_modules/@xmldom/xmldom
+npm error extraneous: abort-controller@ /mnt/data/aiconsole_v142_remediate/work/node_modules/abort-controller
+npm error extraneous: accepts@ /mnt/data/aiconsole_v142_remediate/work/node_modules/accepts
+npm error extraneous: acorn@ /mnt/data/aiconsole_v142_remediate/work/node_modules/acorn
+npm error extraneous: agent-base@ /mnt/data/aiconsole_v142_remediate/work/node_modules/agent-base
+npm error extraneous: agent-cli-detector@ /mnt/data/aiconsole_v142_remediate/work/node_modules/agent-cli-detector
+npm error extraneous: anser@ /mnt/data/aiconsole_v142_remediate/work/node_modules/anser
+npm error extraneous: ansi-escapes@ /mnt/data/aiconsole_v142_remediate/work/node_modules/ansi-escapes
+npm error extraneous: ansi-regex@ /mnt/data/aiconsole_v142_remediate/work/node_modules/ansi-regex
+npm error extraneous: ansi-styles@ /mnt/data/aiconsole_v142_remediate/work/node_modules/ansi-styles
+npm error extraneous: arg@ /mnt/data/aiconsole_v142_remediate/work/node_modules/arg
+npm error extraneous: argparse@ /mnt/data/aiconsole_v142_remediate/work/node_modules/argparse
+npm error extraneous: asap@ /mnt/data/aiconsole_v142_remediate/work/node_modules/asap
+npm error extraneous: babel-plugin-polyfill-corejs2@ /mnt/data/aiconsole_v142_remediate/work/node_modules/babel-plugin-polyfill-corejs2
+npm error extraneous: babel-plugin-polyfill-corejs3@ /mnt/data/aiconsole_v142_remediate/work/node_modules/babel-plugin-polyfill-corejs3
+npm error extraneous: babel-plugin-polyfill-regenerator@ /mnt/data/aiconsole_v142_remediate/work/node_modules/babel-plugin-polyfill-regenerator
+npm error extraneous: babel-plugin-react-compiler@ /mnt/data/aiconsole_v142_remediate/work/node_modules/babel-plugin-react-compiler
+npm error extraneous: babel-plugin-react-native-web@ /mnt/data/aiconsole_v142_remediate/work/node_modules/babel-plugin-react-native-web
+npm error extraneous: babel-plugin-syntax-hermes-parser@ /mnt/data/aiconsole_v142_remediate/work/node_modules/babel-plugin-syntax-hermes-parser
+npm error extraneous: babel-plugin-transform-flow-enums@ /mnt/data/aiconsole_v142_remediate/work/node_modules/babel-plugin-transform-flow-enums
+npm error invalid: babel-preset-expo@ /mnt/data/aiconsole_v142_remediate/work/node_modules/babel-preset-expo
+npm error extraneous: balanced-match@ /mnt/data/aiconsole_v142_remediate/work/node_modules/balanced-match
+npm error extraneous: base64-js@ /mnt/data/aiconsole_v142_remediate/work/node_modules/base64-js
+npm error extraneous: baseline-browser-mapping@ /mnt/data/aiconsole_v142_remediate/work/node_modules/baseline-browser-mapping
+npm error extraneous: big-integer@ /mnt/data/aiconsole_v142_remediate/work/node_modules/big-integer
+npm error extraneous: boolbase@ /mnt/data/aiconsole_v142_remediate/work/node_modules/boolbase
+npm error extraneous: bplist-creator@ /mnt/data/aiconsole_v142_remediate/work/node_modules/bplist-creator
+npm error extraneous: bplist-parser@ /mnt/data/aiconsole_v142_remediate/work/node_modules/bplist-parser
+npm error extraneous: brace-expansion@ /mnt/data/aiconsole_v142_remediate/work/node_modules/brace-expansion
+npm error extraneous: braces@ /mnt/data/aiconsole_v142_remediate/work/node_modules/braces
+npm error extraneous: browserslist@ /mnt/data/aiconsole_v142_remediate/work/node_modules/browserslist
+npm error extraneous: bser@ /mnt/data/aiconsole_v142_remediate/work/node_modules/bser
+npm error extraneous: buffer-from@ /mnt/data/aiconsole_v142_remediate/work/node_modules/buffer-from
+npm error extraneous: bytes@ /mnt/data/aiconsole_v142_remediate/work/node_modules/bytes
+npm error extraneous: camelcase@ /mnt/data/aiconsole_v142_remediate/work/node_modules/camelcase
+npm error extraneous: caniuse-lite@ /mnt/data/aiconsole_v142_remediate/work/node_modules/caniuse-lite
+npm error extraneous: chalk@ /mnt/data/aiconsole_v142_remediate/work/node_modules/chalk
+npm error extraneous: chrome-launcher@ /mnt/data/aiconsole_v142_remediate/work/node_modules/chrome-launcher
+npm error extraneous: chromium-edge-launcher@ /mnt/data/aiconsole_v142_remediate/work/node_modules/chromium-edge-launcher
+npm error extraneous: ci-info@ /mnt/data/aiconsole_v142_remediate/work/node_modules/ci-info
+npm error extraneous: cli-cursor@ /mnt/data/aiconsole_v142_remediate/work/node_modules/cli-cursor
+npm error extraneous: cli-spinners@ /mnt/data/aiconsole_v142_remediate/work/node_modules/cli-spinners
+npm error extraneous: cliui@ /mnt/data/aiconsole_v142_remediate/work/node_modules/cliui
+npm error extraneous: clone@ /mnt/data/aiconsole_v142_remediate/work/node_modules/clone
+npm error extraneous: color-convert@ /mnt/data/aiconsole_v142_remediate/work/node_modules/color-convert
+npm error extraneous: color-name@ /mnt/data/aiconsole_v142_remediate/work/node_modules/color-name
+npm error extraneous: commander@ /mnt/data/aiconsole_v142_remediate/work/node_modules/commander
+npm error extraneous: compressible@ /mnt/data/aiconsole_v142_remediate/work/node_modules/compressible
+npm error extraneous: compression@ /mnt/data/aiconsole_v142_remediate/work/node_modules/compression
+npm error extraneous: connect@ /mnt/data/aiconsole_v142_remediate/work/node_modules/connect
+npm error extraneous: content-type@ /mnt/data/aiconsole_v142_remediate/work/node_modules/content-type
+npm error extraneous: convert-source-map@ /mnt/data/aiconsole_v142_remediate/work/node_modules/convert-source-map
+npm error extraneous: core-js-compat@ /mnt/data/aiconsole_v142_remediate/work/node_modules/core-js-compat
+npm error extraneous: core-util-is@ /mnt/data/aiconsole_v142_remediate/work/node_modules/core-util-is
+npm error extraneous: cross-spawn@ /mnt/data/aiconsole_v142_remediate/work/node_modules/cross-spawn
+npm error extraneous: css-select@ /mnt/data/aiconsole_v142_remediate/work/node_modules/css-select
+npm error extraneous: css-tree@ /mnt/data/aiconsole_v142_remediate/work/node_modules/css-tree
+npm error extraneous: css-what@ /mnt/data/aiconsole_v142_remediate/work/node_modules/css-what
+npm error extraneous: debug@ /mnt/data/aiconsole_v142_remediate/work/node_modules/debug
+npm error extraneous: deepmerge@ /mnt/data/aiconsole_v142_remediate/work/node_modules/deepmerge
+npm error extraneous: defaults@ /mnt/data/aiconsole_v142_remediate/work/node_modules/defaults
+npm error extraneous: depd@ /mnt/data/aiconsole_v142_remediate/work/node_modules/depd
+npm error extraneous: destroy@ /mnt/data/aiconsole_v142_remediate/work/node_modules/destroy
+npm error extraneous: detect-libc@ /mnt/data/aiconsole_v142_remediate/work/node_modules/detect-libc
+npm error extraneous: dnssd-advertise@ /mnt/data/aiconsole_v142_remediate/work/node_modules/dnssd-advertise
+npm error extraneous: dom-serializer@ /mnt/data/aiconsole_v142_remediate/work/node_modules/dom-serializer
+npm error extraneous: domelementtype@ /mnt/data/aiconsole_v142_remediate/work/node_modules/domelementtype
+npm error extraneous: domhandler@ /mnt/data/aiconsole_v142_remediate/work/node_modules/domhandler
+npm error extraneous: domutils@ /mnt/data/aiconsole_v142_remediate/work/node_modules/domutils
+npm error extraneous: ee-first@ /mnt/data/aiconsole_v142_remediate/work/node_modules/ee-first
+npm error extraneous: electron-to-chromium@ /mnt/data/aiconsole_v142_remediate/work/node_modules/electron-to-chromium
+npm error extraneous: emoji-regex@ /mnt/data/aiconsole_v142_remediate/work/node_modules/emoji-regex
+npm error extraneous: encodeurl@ /mnt/data/aiconsole_v142_remediate/work/node_modules/encodeurl
+npm error extraneous: entities@ /mnt/data/aiconsole_v142_remediate/work/node_modules/entities
+npm error extraneous: error-stack-parser@ /mnt/data/aiconsole_v142_remediate/work/node_modules/error-stack-parser
+npm error extraneous: es-errors@ /mnt/data/aiconsole_v142_remediate/work/node_modules/es-errors
+npm error extraneous: escalade@ /mnt/data/aiconsole_v142_remediate/work/node_modules/escalade
+npm error extraneous: escape-html@ /mnt/data/aiconsole_v142_remediate/work/node_modules/escape-html
+npm error extraneous: escape-string-regexp@ /mnt/data/aiconsole_v142_remediate/work/node_modules/escape-string-regexp
+npm error extraneous: etag@ /mnt/data/aiconsole_v142_remediate/work/node_modules/etag
+npm error extraneous: event-target-shim@ /mnt/data/aiconsole_v142_remediate/work/node_modules/event-target-shim
+npm error invalid: expo-clipboard@ /mnt/data/aiconsole_v142_remediate/work/node_modules/expo-clipboard
+npm error invalid: expo-constants@ /mnt/data/aiconsole_v142_remediate/work/node_modules/expo-constants
+npm error invalid: expo-document-picker@ /mnt/data/aiconsole_v142_remediate/work/node_modules/expo-document-picker
+npm error invalid: expo-file-system@ /mnt/data/aiconsole_v142_remediate/work/node_modules/expo-file-system
+npm error extraneous: expo-image-loader@ /mnt/data/aiconsole_v142_remediate/work/node_modules/expo-image-loader
+npm error invalid: expo-image-picker@ /mnt/data/aiconsole_v142_remediate/work/node_modules/expo-image-picker
+npm error extraneous: expo-modules-autolinking@ /mnt/data/aiconsole_v142_remediate/work/node_modules/expo-modules-autolinking
+npm error extraneous: expo-modules-core@ /mnt/data/aiconsole_v142_remediate/work/node_modules/expo-modules-core
+npm error extraneous: expo-modules-jsi@ /mnt/data/aiconsole_v142_remediate/work/node_modules/expo-modules-jsi
+npm error invalid: expo-print@ /mnt/data/aiconsole_v142_remediate/work/node_modules/expo-print
+npm error invalid: expo-secure-store@ /mnt/data/aiconsole_v142_remediate/work/node_modules/expo-secure-store
+npm error extraneous: expo-server@ /mnt/data/aiconsole_v142_remediate/work/node_modules/expo-server
+npm error invalid: expo-sharing@ /mnt/data/aiconsole_v142_remediate/work/node_modules/expo-sharing
+npm error invalid: expo-speech-recognition@ /mnt/data/aiconsole_v142_remediate/work/node_modules/expo-speech-recognition
+npm error invalid: expo-speech@ /mnt/data/aiconsole_v142_remediate/work/node_modules/expo-speech
+npm error invalid: expo-splash-screen@ /mnt/data/aiconsole_v142_remediate/work/node_modules/expo-splash-screen
+npm error invalid: expo-status-bar@ /mnt/data/aiconsole_v142_remediate/work/node_modules/expo-status-bar
+npm error invalid: expo@ /mnt/data/aiconsole_v142_remediate/work/node_modules/expo
+npm error extraneous: exponential-backoff@ /mnt/data/aiconsole_v142_remediate/work/node_modules/exponential-backoff
+npm error extraneous: fb-dotslash@ /mnt/data/aiconsole_v142_remediate/work/node_modules/fb-dotslash
+npm error extraneous: fb-watchman@ /mnt/data/aiconsole_v142_remediate/work/node_modules/fb-watchman
+npm error extraneous: fdir@ /mnt/data/aiconsole_v142_remediate/work/node_modules/fdir
+npm error extraneous: fetch-nodeshim@ /mnt/data/aiconsole_v142_remediate/work/node_modules/fetch-nodeshim
+npm error extraneous: fill-range@ /mnt/data/aiconsole_v142_remediate/work/node_modules/fill-range
+npm error extraneous: finalhandler@ /mnt/data/aiconsole_v142_remediate/work/node_modules/finalhandler
+npm error extraneous: flow-enums-runtime@ /mnt/data/aiconsole_v142_remediate/work/node_modules/flow-enums-runtime
+npm error extraneous: fontfaceobserver@ /mnt/data/aiconsole_v142_remediate/work/node_modules/fontfaceobserver
+npm error extraneous: fresh@ /mnt/data/aiconsole_v142_remediate/work/node_modules/fresh
+npm error extraneous: function-bind@ /mnt/data/aiconsole_v142_remediate/work/node_modules/function-bind
+npm error extraneous: gensync@ /mnt/data/aiconsole_v142_remediate/work/node_modules/gensync
+npm error extraneous: get-caller-file@ /mnt/data/aiconsole_v142_remediate/work/node_modules/get-caller-file
+npm error extraneous: getenv@ /mnt/data/aiconsole_v142_remediate/work/node_modules/getenv
+npm error extraneous: glob@ /mnt/data/aiconsole_v142_remediate/work/node_modules/glob
+npm error extraneous: graceful-fs@ /mnt/data/aiconsole_v142_remediate/work/node_modules/graceful-fs
+npm error extraneous: has-flag@ /mnt/data/aiconsole_v142_remediate/work/node_modules/has-flag
+npm error extraneous: hasown@ /mnt/data/aiconsole_v142_remediate/work/node_modules/hasown
+npm error extraneous: hermes-compiler@ /mnt/data/aiconsole_v142_remediate/work/node_modules/hermes-compiler
+npm error extraneous: hermes-estree@ /mnt/data/aiconsole_v142_remediate/work/node_modules/hermes-estree
+npm error extraneous: hermes-parser@ /mnt/data/aiconsole_v142_remediate/work/node_modules/hermes-parser
+npm error extraneous: hosted-git-info@ /mnt/data/aiconsole_v142_remediate/work/node_modules/hosted-git-info
+npm error extraneous: http-errors@ /mnt/data/aiconsole_v142_remediate/work/node_modules/http-errors
+npm error extraneous: https-proxy-agent@ /mnt/data/aiconsole_v142_remediate/work/node_modules/https-proxy-agent
+npm error extraneous: ignore@ /mnt/data/aiconsole_v142_remediate/work/node_modules/ignore
+npm error extraneous: immediate@ /mnt/data/aiconsole_v142_remediate/work/node_modules/immediate
+npm error extraneous: inherits@ /mnt/data/aiconsole_v142_remediate/work/node_modules/inherits
+npm error extraneous: invariant@ /mnt/data/aiconsole_v142_remediate/work/node_modules/invariant
+npm error extraneous: is-core-module@ /mnt/data/aiconsole_v142_remediate/work/node_modules/is-core-module
+npm error extraneous: is-docker@ /mnt/data/aiconsole_v142_remediate/work/node_modules/is-docker
+npm error extraneous: is-number@ /mnt/data/aiconsole_v142_remediate/work/node_modules/is-number
+npm error extraneous: is-plain-obj@ /mnt/data/aiconsole_v142_remediate/work/node_modules/is-plain-obj
+npm error extraneous: is-wsl@ /mnt/data/aiconsole_v142_remediate/work/node_modules/is-wsl
+npm error extraneous: isarray@ /mnt/data/aiconsole_v142_remediate/work/node_modules/isarray
+npm error extraneous: isexe@ /mnt/data/aiconsole_v142_remediate/work/node_modules/isexe
+npm error extraneous: jest-get-type@ /mnt/data/aiconsole_v142_remediate/work/node_modules/jest-get-type
+npm error extraneous: jest-util@ /mnt/data/aiconsole_v142_remediate/work/node_modules/jest-util
+npm error extraneous: jest-validate@ /mnt/data/aiconsole_v142_remediate/work/node_modules/jest-validate
+npm error extraneous: jest-worker@ /mnt/data/aiconsole_v142_remediate/work/node_modules/jest-worker
+npm error extraneous: jimp-compact@ /mnt/data/aiconsole_v142_remediate/work/node_modules/jimp-compact
+npm error extraneous: js-tokens@ /mnt/data/aiconsole_v142_remediate/work/node_modules/js-tokens
+npm error extraneous: js-yaml@ /mnt/data/aiconsole_v142_remediate/work/node_modules/js-yaml
+npm error extraneous: jsc-safe-url@ /mnt/data/aiconsole_v142_remediate/work/node_modules/jsc-safe-url
+npm error extraneous: jsesc@ /mnt/data/aiconsole_v142_remediate/work/node_modules/jsesc
+npm error extraneous: json5@ /mnt/data/aiconsole_v142_remediate/work/node_modules/json5
+npm error invalid: jszip@ /mnt/data/aiconsole_v142_remediate/work/node_modules/jszip
+npm error extraneous: kleur@ /mnt/data/aiconsole_v142_remediate/work/node_modules/kleur
+npm error extraneous: lan-network@ /mnt/data/aiconsole_v142_remediate/work/node_modules/lan-network
+npm error extraneous: leven@ /mnt/data/aiconsole_v142_remediate/work/node_modules/leven
+npm error extraneous: lie@ /mnt/data/aiconsole_v142_remediate/work/node_modules/lie
+npm error extraneous: lighthouse-logger@ /mnt/data/aiconsole_v142_remediate/work/node_modules/lighthouse-logger
+npm error extraneous: lightningcss-android-arm64@ /mnt/data/aiconsole_v142_remediate/work/node_modules/lightningcss-android-arm64
+npm error extraneous: lightningcss-darwin-arm64@ /mnt/data/aiconsole_v142_remediate/work/node_modules/lightningcss-darwin-arm64
+npm error extraneous: lightningcss-darwin-x64@ /mnt/data/aiconsole_v142_remediate/work/node_modules/lightningcss-darwin-x64
+npm error extraneous: lightningcss-freebsd-x64@ /mnt/data/aiconsole_v142_remediate/work/node_modules/lightningcss-freebsd-x64
+npm error extraneous: lightningcss-linux-arm-gnueabihf@ /mnt/data/aiconsole_v142_remediate/work/node_modules/lightningcss-linux-arm-gnueabihf
+npm error extraneous: lightningcss-linux-arm64-gnu@ /mnt/data/aiconsole_v142_remediate/work/node_modules/lightningcss-linux-arm64-gnu
+npm error extraneous: lightningcss-linux-arm64-musl@ /mnt/data/aiconsole_v142_remediate/work/node_modules/lightningcss-linux-arm64-musl
+npm error extraneous: lightningcss-linux-x64-gnu@ /mnt/data/aiconsole_v142_remediate/work/node_modules/lightningcss-linux-x64-gnu
+npm error extraneous: lightningcss-linux-x64-musl@ /mnt/data/aiconsole_v142_remediate/work/node_modules/lightningcss-linux-x64-musl
+npm error extraneous: lightningcss-win32-arm64-msvc@ /mnt/data/aiconsole_v142_remediate/work/node_modules/lightningcss-win32-arm64-msvc
+npm error extraneous: lightningcss-win32-x64-msvc@ /mnt/data/aiconsole_v142_remediate/work/node_modules/lightningcss-win32-x64-msvc
+npm error extraneous: lightningcss@ /mnt/data/aiconsole_v142_remediate/work/node_modules/lightningcss
+npm error extraneous: lodash.debounce@ /mnt/data/aiconsole_v142_remediate/work/node_modules/lodash.debounce
+npm error extraneous: lodash.throttle@ /mnt/data/aiconsole_v142_remediate/work/node_modules/lodash.throttle
+npm error extraneous: log-symbols@ /mnt/data/aiconsole_v142_remediate/work/node_modules/log-symbols
+npm error extraneous: loose-envify@ /mnt/data/aiconsole_v142_remediate/work/node_modules/loose-envify
+npm error extraneous: lru-cache@ /mnt/data/aiconsole_v142_remediate/work/node_modules/lru-cache
+npm error extraneous: makeerror@ /mnt/data/aiconsole_v142_remediate/work/node_modules/makeerror
+npm error extraneous: marky@ /mnt/data/aiconsole_v142_remediate/work/node_modules/marky
+npm error extraneous: mdn-data@ /mnt/data/aiconsole_v142_remediate/work/node_modules/mdn-data
+npm error extraneous: memoize-one@ /mnt/data/aiconsole_v142_remediate/work/node_modules/memoize-one
+npm error extraneous: merge-options@ /mnt/data/aiconsole_v142_remediate/work/node_modules/merge-options
+npm error extraneous: merge-stream@ /mnt/data/aiconsole_v142_remediate/work/node_modules/merge-stream
+npm error extraneous: metro-babel-transformer@ /mnt/data/aiconsole_v142_remediate/work/node_modules/metro-babel-transformer
+npm error extraneous: metro-cache-key@ /mnt/data/aiconsole_v142_remediate/work/node_modules/metro-cache-key
+npm error extraneous: metro-cache@ /mnt/data/aiconsole_v142_remediate/work/node_modules/metro-cache
+npm error extraneous: metro-config@ /mnt/data/aiconsole_v142_remediate/work/node_modules/metro-config
+npm error extraneous: metro-core@ /mnt/data/aiconsole_v142_remediate/work/node_modules/metro-core
+npm error extraneous: metro-file-map@ /mnt/data/aiconsole_v142_remediate/work/node_modules/metro-file-map
+npm error extraneous: metro-minify-terser@ /mnt/data/aiconsole_v142_remediate/work/node_modules/metro-minify-terser
+npm error extraneous: metro-resolver@ /mnt/data/aiconsole_v142_remediate/work/node_modules/metro-resolver
+npm error extraneous: metro-runtime@ /mnt/data/aiconsole_v142_remediate/work/node_modules/metro-runtime
+npm error extraneous: metro-source-map@ /mnt/data/aiconsole_v142_remediate/work/node_modules/metro-source-map
+npm error extraneous: metro-symbolicate@ /mnt/data/aiconsole_v142_remediate/work/node_modules/metro-symbolicate
+npm error extraneous: metro-transform-plugins@ /mnt/data/aiconsole_v142_remediate/work/node_modules/metro-transform-plugins
+npm error extraneous: metro-transform-worker@ /mnt/data/aiconsole_v142_remediate/work/node_modules/metro-transform-worker
+npm error extraneous: metro@ /mnt/data/aiconsole_v142_remediate/work/node_modules/metro
+npm error extraneous: micromatch@ /mnt/data/aiconsole_v142_remediate/work/node_modules/micromatch
+npm error extraneous: mime-db@ /mnt/data/aiconsole_v142_remediate/work/node_modules/mime-db
+npm error extraneous: mime-types@ /mnt/data/aiconsole_v142_remediate/work/node_modules/mime-types
+npm error extraneous: mime@ /mnt/data/aiconsole_v142_remediate/work/node_modules/mime
+npm error extraneous: mimic-fn@ /mnt/data/aiconsole_v142_remediate/work/node_modules/mimic-fn
+npm error extraneous: minimatch@ /mnt/data/aiconsole_v142_remediate/work/node_modules/minimatch
+npm error extraneous: minipass@ /mnt/data/aiconsole_v142_remediate/work/node_modules/minipass
+npm error extraneous: mkdirp@ /mnt/data/aiconsole_v142_remediate/work/node_modules/mkdirp
+npm error extraneous: ms@ /mnt/data/aiconsole_v142_remediate/work/node_modules/ms
+npm error extraneous: multitars@ /mnt/data/aiconsole_v142_remediate/work/node_modules/multitars
+npm error extraneous: nanoid@ /mnt/data/aiconsole_v142_remediate/work/node_modules/nanoid
+npm error extraneous: negotiator@ /mnt/data/aiconsole_v142_remediate/work/node_modules/negotiator
+npm error extraneous: node-forge@ /mnt/data/aiconsole_v142_remediate/work/node_modules/node-forge
+npm error extraneous: node-int64@ /mnt/data/aiconsole_v142_remediate/work/node_modules/node-int64
+npm error extraneous: node-releases@ /mnt/data/aiconsole_v142_remediate/work/node_modules/node-releases
+npm error extraneous: npm-package-arg@ /mnt/data/aiconsole_v142_remediate/work/node_modules/npm-package-arg
+npm error extraneous: nth-check@ /mnt/data/aiconsole_v142_remediate/work/node_modules/nth-check
+npm error extraneous: nullthrows@ /mnt/data/aiconsole_v142_remediate/work/node_modules/nullthrows
+npm error extraneous: ob1@ /mnt/data/aiconsole_v142_remediate/work/node_modules/ob1
+npm error extraneous: on-finished@ /mnt/data/aiconsole_v142_remediate/work/node_modules/on-finished
+npm error extraneous: on-headers@ /mnt/data/aiconsole_v142_remediate/work/node_modules/on-headers
+npm error extraneous: onetime@ /mnt/data/aiconsole_v142_remediate/work/node_modules/onetime
+npm error extraneous: open@ /mnt/data/aiconsole_v142_remediate/work/node_modules/open
+npm error extraneous: ora@ /mnt/data/aiconsole_v142_remediate/work/node_modules/ora
+npm error invalid: pako@ /mnt/data/aiconsole_v142_remediate/work/node_modules/pako
+npm error extraneous: parse-png@ /mnt/data/aiconsole_v142_remediate/work/node_modules/parse-png
+npm error extraneous: parseurl@ /mnt/data/aiconsole_v142_remediate/work/node_modules/parseurl
+npm error extraneous: path-key@ /mnt/data/aiconsole_v142_remediate/work/node_modules/path-key
+npm error extraneous: path-parse@ /mnt/data/aiconsole_v142_remediate/work/node_modules/path-parse
+npm error extraneous: path-scurry@ /mnt/data/aiconsole_v142_remediate/work/node_modules/path-scurry
+npm error extraneous: picocolors@ /mnt/data/aiconsole_v142_remediate/work/node_modules/picocolors
+npm error extraneous: picomatch@ /mnt/data/aiconsole_v142_remediate/work/node_modules/picomatch
+npm error extraneous: plist@ /mnt/data/aiconsole_v142_remediate/work/node_modules/plist
+npm error extraneous: pngjs@ /mnt/data/aiconsole_v142_remediate/work/node_modules/pngjs
+npm error extraneous: postcss@ /mnt/data/aiconsole_v142_remediate/work/node_modules/postcss
+npm error extraneous: pretty-format@ /mnt/data/aiconsole_v142_remediate/work/node_modules/pretty-format
+npm error extraneous: proc-log@ /mnt/data/aiconsole_v142_remediate/work/node_modules/proc-log
+npm error extraneous: process-nextick-args@ /mnt/data/aiconsole_v142_remediate/work/node_modules/process-nextick-args
+npm error extraneous: progress@ /mnt/data/aiconsole_v142_remediate/work/node_modules/progress
+npm error extraneous: prompts@ /mnt/data/aiconsole_v142_remediate/work/node_modules/prompts
+npm error extraneous: range-parser@ /mnt/data/aiconsole_v142_remediate/work/node_modules/range-parser
+npm error extraneous: react-devtools-core@ /mnt/data/aiconsole_v142_remediate/work/node_modules/react-devtools-core
+npm error extraneous: react-is@ /mnt/data/aiconsole_v142_remediate/work/node_modules/react-is
+npm error invalid: react-native-safe-area-context@ /mnt/data/aiconsole_v142_remediate/work/node_modules/react-native-safe-area-context
+npm error invalid: react-native-svg@ /mnt/data/aiconsole_v142_remediate/work/node_modules/react-native-svg
+npm error invalid: react-native@ /mnt/data/aiconsole_v142_remediate/work/node_modules/react-native
+npm error extraneous: react-refresh@ /mnt/data/aiconsole_v142_remediate/work/node_modules/react-refresh
+npm error invalid: react@ /mnt/data/aiconsole_v142_remediate/work/node_modules/react
+npm error extraneous: readable-stream@ /mnt/data/aiconsole_v142_remediate/work/node_modules/readable-stream
+npm error extraneous: regenerate-unicode-properties@ /mnt/data/aiconsole_v142_remediate/work/node_modules/regenerate-unicode-properties
+npm error extraneous: regenerate@ /mnt/data/aiconsole_v142_remediate/work/node_modules/regenerate
+npm error extraneous: regenerator-runtime@ /mnt/data/aiconsole_v142_remediate/work/node_modules/regenerator-runtime
+npm error extraneous: regexpu-core@ /mnt/data/aiconsole_v142_remediate/work/node_modules/regexpu-core
+npm error extraneous: regjsgen@ /mnt/data/aiconsole_v142_remediate/work/node_modules/regjsgen
+npm error extraneous: regjsparser@ /mnt/data/aiconsole_v142_remediate/work/node_modules/regjsparser
+npm error extraneous: require-directory@ /mnt/data/aiconsole_v142_remediate/work/node_modules/require-directory
+npm error extraneous: resolve-from@ /mnt/data/aiconsole_v142_remediate/work/node_modules/resolve-from
+npm error extraneous: resolve-workspace-root@ /mnt/data/aiconsole_v142_remediate/work/node_modules/resolve-workspace-root
+npm error extraneous: resolve@ /mnt/data/aiconsole_v142_remediate/work/node_modules/resolve
+npm error extraneous: restore-cursor@ /mnt/data/aiconsole_v142_remediate/work/node_modules/restore-cursor
+npm error extraneous: safe-buffer@ /mnt/data/aiconsole_v142_remediate/work/node_modules/safe-buffer
+npm error extraneous: sandbox-cli-detector@ /mnt/data/aiconsole_v142_remediate/work/node_modules/sandbox-cli-detector
+npm error extraneous: sax@ /mnt/data/aiconsole_v142_remediate/work/node_modules/sax
+npm error extraneous: scheduler@ /mnt/data/aiconsole_v142_remediate/work/node_modules/scheduler
+npm error extraneous: semver@ /mnt/data/aiconsole_v142_remediate/work/node_modules/semver
+npm error extraneous: send@ /mnt/data/aiconsole_v142_remediate/work/node_modules/send
+npm error extraneous: serialize-error@ /mnt/data/aiconsole_v142_remediate/work/node_modules/serialize-error
+npm error extraneous: serve-static@ /mnt/data/aiconsole_v142_remediate/work/node_modules/serve-static
+npm error extraneous: setimmediate@ /mnt/data/aiconsole_v142_remediate/work/node_modules/setimmediate
+npm error extraneous: setprototypeof@ /mnt/data/aiconsole_v142_remediate/work/node_modules/setprototypeof
+npm error extraneous: shebang-command@ /mnt/data/aiconsole_v142_remediate/work/node_modules/shebang-command
+npm error extraneous: shebang-regex@ /mnt/data/aiconsole_v142_remediate/work/node_modules/shebang-regex
+npm error extraneous: shell-quote@ /mnt/data/aiconsole_v142_remediate/work/node_modules/shell-quote
+npm error extraneous: signal-exit@ /mnt/data/aiconsole_v142_remediate/work/node_modules/signal-exit
+npm error extraneous: simple-plist@ /mnt/data/aiconsole_v142_remediate/work/node_modules/simple-plist
+npm error extraneous: sisteransi@ /mnt/data/aiconsole_v142_remediate/work/node_modules/sisteransi
+npm error extraneous: slugify@ /mnt/data/aiconsole_v142_remediate/work/node_modules/slugify
+npm error extraneous: source-map-js@ /mnt/data/aiconsole_v142_remediate/work/node_modules/source-map-js
+npm error extraneous: source-map-support@ /mnt/data/aiconsole_v142_remediate/work/node_modules/source-map-support
+npm error extraneous: source-map@ /mnt/data/aiconsole_v142_remediate/work/node_modules/source-map
+npm error extraneous: stackframe@ /mnt/data/aiconsole_v142_remediate/work/node_modules/stackframe
+npm error extraneous: stacktrace-parser@ /mnt/data/aiconsole_v142_remediate/work/node_modules/stacktrace-parser
+npm error extraneous: statuses@ /mnt/data/aiconsole_v142_remediate/work/node_modules/statuses
+npm error extraneous: stream-buffers@ /mnt/data/aiconsole_v142_remediate/work/node_modules/stream-buffers
+npm error extraneous: string_decoder@ /mnt/data/aiconsole_v142_remediate/work/node_modules/string_decoder
+npm error extraneous: string-width@ /mnt/data/aiconsole_v142_remediate/work/node_modules/string-width
+npm error extraneous: strip-ansi@ /mnt/data/aiconsole_v142_remediate/work/node_modules/strip-ansi
+npm error extraneous: structured-headers@ /mnt/data/aiconsole_v142_remediate/work/node_modules/structured-headers
+npm error extraneous: supports-color@ /mnt/data/aiconsole_v142_remediate/work/node_modules/supports-color
+npm error extraneous: supports-hyperlinks@ /mnt/data/aiconsole_v142_remediate/work/node_modules/supports-hyperlinks
+npm error extraneous: supports-preserve-symlinks-flag@ /mnt/data/aiconsole_v142_remediate/work/node_modules/supports-preserve-symlinks-flag
+npm error extraneous: terminal-link@ /mnt/data/aiconsole_v142_remediate/work/node_modules/terminal-link
+npm error extraneous: terser@ /mnt/data/aiconsole_v142_remediate/work/node_modules/terser
+npm error extraneous: throat@ /mnt/data/aiconsole_v142_remediate/work/node_modules/throat
+npm error extraneous: tinyglobby@ /mnt/data/aiconsole_v142_remediate/work/node_modules/tinyglobby
+npm error extraneous: tmpl@ /mnt/data/aiconsole_v142_remediate/work/node_modules/tmpl
+npm error extraneous: to-regex-range@ /mnt/data/aiconsole_v142_remediate/work/node_modules/to-regex-range
+npm error extraneous: toidentifier@ /mnt/data/aiconsole_v142_remediate/work/node_modules/toidentifier
+npm error extraneous: toqr@ /mnt/data/aiconsole_v142_remediate/work/node_modules/toqr
+npm error extraneous: type-fest@ /mnt/data/aiconsole_v142_remediate/work/node_modules/type-fest
+npm error extraneous: undici-types@ /mnt/data/aiconsole_v142_remediate/work/node_modules/undici-types
+npm error extraneous: unicode-canonical-property-names-ecmascript@ /mnt/data/aiconsole_v142_remediate/work/node_modules/unicode-canonical-property-names-ecmascript
+npm error extraneous: unicode-match-property-ecmascript@ /mnt/data/aiconsole_v142_remediate/work/node_modules/unicode-match-property-ecmascript
+npm error extraneous: unicode-match-property-value-ecmascript@ /mnt/data/aiconsole_v142_remediate/work/node_modules/unicode-match-property-value-ecmascript
+npm error extraneous: unicode-property-aliases-ecmascript@ /mnt/data/aiconsole_v142_remediate/work/node_modules/unicode-property-aliases-ecmascript
+npm error extraneous: unpipe@ /mnt/data/aiconsole_v142_remediate/work/node_modules/unpipe
+npm error extraneous: update-browserslist-db@ /mnt/data/aiconsole_v142_remediate/work/node_modules/update-browserslist-db
+npm error extraneous: util-deprecate@ /mnt/data/aiconsole_v142_remediate/work/node_modules/util-deprecate
+npm error extraneous: utils-merge@ /mnt/data/aiconsole_v142_remediate/work/node_modules/utils-merge
+npm error extraneous: validate-npm-package-name@ /mnt/data/aiconsole_v142_remediate/work/node_modules/validate-npm-package-name
+npm error extraneous: vary@ /mnt/data/aiconsole_v142_remediate/work/node_modules/vary
+npm error extraneous: vlq@ /mnt/data/aiconsole_v142_remediate/work/node_modules/vlq
+npm error extraneous: walker@ /mnt/data/aiconsole_v142_remediate/work/node_modules/walker
+npm error extraneous: warn-once@ /mnt/data/aiconsole_v142_remediate/work/node_modules/warn-once
+npm error extraneous: wcwidth@ /mnt/data/aiconsole_v142_remediate/work/node_modules/wcwidth
+npm error extraneous: whatwg-fetch@ /mnt/data/aiconsole_v142_remediate/work/node_modules/whatwg-fetch
+npm error extraneous: whatwg-url-minimum@ /mnt/data/aiconsole_v142_remediate/work/node_modules/whatwg-url-minimum
+npm error extraneous: which@ /mnt/data/aiconsole_v142_remediate/work/node_modules/which
+npm error extraneous: wrap-ansi@ /mnt/data/aiconsole_v142_remediate/work/node_modules/wrap-ansi
+npm error extraneous: ws@ /mnt/data/aiconsole_v142_remediate/work/node_modules/ws
+npm error extraneous: xcode@ /mnt/data/aiconsole_v142_remediate/work/node_modules/xcode
+npm error extraneous: xml2js@ /mnt/data/aiconsole_v142_remediate/work/node_modules/xml2js
+npm error extraneous: xmlbuilder@ /mnt/data/aiconsole_v142_remediate/work/node_modules/xmlbuilder
+npm error extraneous: y18n@ /mnt/data/aiconsole_v142_remediate/work/node_modules/y18n
+npm error extraneous: yallist@ /mnt/data/aiconsole_v142_remediate/work/node_modules/yallist
+npm error extraneous: yaml@ /mnt/data/aiconsole_v142_remediate/work/node_modules/yaml
+npm error extraneous: yargs-parser@ /mnt/data/aiconsole_v142_remediate/work/node_modules/yargs-parser
+npm error extraneous: yargs@ /mnt/data/aiconsole_v142_remediate/work/node_modules/yargs
+npm error extraneous: zod@ /mnt/data/aiconsole_v142_remediate/work/node_modules/zod
+npm error A complete log of this run can be found in: /home/oai/.npm/_logs/2026-08-25T19_34_15_826Z-debug-0.log

@@ -1,36 +1,48 @@
-# AI Console v1.4.0 — GitHub Continuation Prompt
+# AI Console v1.4.2 — Release-Gate Remediation Continuation Prompt
 
-You are the continuation LLM responsible for taking `AI_CONSOLE_V1_4_0_GITHUB_READY_EXEC002_24082026030345.zip` through a fresh GitHub repository/Actions APK build and truthful verification.
+Continue from `AI_CONSOLE_V1_4_2_RELEASE_GATE_REMEDIATED_SOURCE_25082026212533.zip`. Do not use the previously distributed v1.4.2 APK as an accepted baseline; it remains NO-GO.
 
-Before substantive work, retrieve and read the complete current `/Master Documents/MASTER_LLM_OPERATING_RULES.md` from the connected Library. The package was prepared under Master Rules v1.2.14 / revision 20260823-02; the Library remains authoritative if a newer authorised revision exists. If the current rules cannot be retrieved, state exactly `MASTER RULE BOOTSTRAP: UNVERIFIABLE` and continue only with available evidence.
+Before substantive work, retrieve/read the current `/Master Documents/MASTER_LLM_OPERATING_RULES.md`.
+
+## Current verified source state
+
+- The Hermes startup defect caused by `TextDecoder('latin1')` is removed and regression guarded.
+- Audit DEFECT-006 is remediated in source: Android runtime acceptance now requires positive UI evidence from the real application, not only PID survival/no fatal log. Both emulator targets must produce the real-app marker and must not display either recovery shell.
+- Audit DEFECT-007 is remediated in source: `npm run build:apk` fails closed; EAS is retained only as the explicitly diagnostic `npm run build:apk:diagnostic` path.
+- Audit DEFECT-008 is remediated in source: current release guidance/UI identity is v1.4.2 / versionCode 11.
+- Local source verification: `npm run check` PASS, `node scripts/ci-version-guard.mjs` PASS, `node scripts/verify-runtime-contract.mjs` PASS, workflow YAML parse PASS, full locally executable test suite 79/79 PASS with zero skips when exact jszip 3.10.1 is supplied from the preinstalled local toolchain.
+- Clean `npm ci`, Expo validation/prebuild, Gradle build, emulator execution, fresh APK package forensics and physical-device/provider acceptance remain unexecuted here.
 
 ## Required sequence
 
-1. Verify the external ZIP SHA-256 supplied with the package.
-2. Extract the ZIP directly as the GitHub repository root; `package.json`, `app.json`, `App.js` and `.github/` must be at root.
-3. Read `README.md`, `REMEDIATION_REPORT.md`, `VERIFICATION_STATUS.md`, `KNOWN_EXTERNAL_GATES.md`, the three full v1.4.0 specifications under `docs/`, `FILE_INVENTORY.txt`, `SHA256SUMS.txt`, `.github/workflows/android-apk.yml`, `package.json`, `package-lock.json` and `app.json`.
-4. Verify the embedded `SHA256SUMS.txt` before changing source.
-5. In a clean dependency environment run `npm ci --no-fund`, then `npm audit --omit=dev --audit-level=high`.
-6. Run `npm run check`, `npm test`, `node scripts/ci-version-guard.mjs`, and `node scripts/verify-runtime-contract.mjs`. The full suite is release-critical: no test or JSZip archive round trip may be skipped.
-7. Run `npx expo install --check` and `npx --yes expo-doctor@1.20.2`.
-8. Confirm the intended GitHub repository target before any remote write. This handover does not itself authorise overwriting an unrelated repository or history.
-9. Use `.github/workflows/android-apk.yml`; external Actions are already pinned to immutable full commit SHAs.
-10. Run preview first with `signing_mode=preview` and `run_emulator_checks=false`. Preview must build the debug variant and verify Android Debug signer evidence.
-11. Preserve and inspect the APK and diagnostic Actions artefacts from the same workflow run.
-12. After preview APK generation succeeds, rerun with `run_emulator_checks=true`. Do not conflate the two runtime gates: Android 16/API-36 cold launch uses the API-36 image; full 16-KB runtime evidence uses the dedicated Android-15 `google_apis_ps16k` image and must prove `PAGE_SIZE=16384`.
-13. Do not mark 16-KB acceptance PASS unless the same candidate establishes `APK_ZIPALIGN_16K=PASS`, `APK_NATIVE_ELF_16K=PASS`, `EMULATOR_PAGE_SIZE_16K=PASS`, and `ANDROID_16K_PROCESS_SURVIVAL=PASS`.
-14. Do not mark Android 16 runtime acceptance PASS unless the API-36 cold-launch gate establishes `ANDROID_16_PROCESS_SURVIVAL=PASS`.
-15. For production, configure the authorised GitHub Secrets listed in `docs/RELEASING.md`; production must build the release variant and verify the resulting signer SHA-256 against `AI_CONSOLE_ANDROID_CERT_SHA256` without logging secret values.
-16. If any CI/build/runtime gate fails, repair the root cause and rerun the affected and regression gates. Do not treat this package's GitHub-ready status as pre-approval of an APK.
-17. Return PASS / FAIL / PARTIAL / UNVERIFIABLE classifications for dependency restoration, source tests, preview APK, production signing, Android 16 runtime, dedicated 16-KB runtime, and physical-device acceptance.
+1. Verify this handover ZIP SHA-256 and embedded checksum manifest before changing source.
+2. Extract directly at repository root.
+3. Run clean `npm ci --no-fund`; then `npm audit --omit=dev --audit-level=high`.
+4. Run `npm run check`, `npm test`, `node scripts/ci-version-guard.mjs`, `node scripts/verify-runtime-contract.mjs`, `npx expo install --check`, and pinned Expo Doctor. No release-critical skip is permitted.
+5. Build the candidate only through `.github/workflows/android-apk.yml` with `run_emulator_checks=true`.
+6. Require, for the same candidate APK:
+   - `ANDROID_16_PROCESS_SURVIVAL=PASS`
+   - `ANDROID_16_APP_READY=PASS`
+   - `EMULATOR_PAGE_SIZE_16K=PASS`
+   - `ANDROID_16K_PROCESS_SURVIVAL=PASS`
+   - `ANDROID_16K_APP_READY=PASS`
+   - `RELEASE_RUNTIME_ACCEPTANCE=PASS`
+7. Confirm the UI-ready evidence came from `uiautomator` inspection using `scripts/verify-app-ready-ui.mjs`; process survival alone is insufficient.
+8. Reject any candidate displaying `AI Console could not start safely` or `AI Console could not open this screen safely`.
+9. Do not promote output from `npm run build:apk:diagnostic`; it is diagnostic-only.
+10. Inspect the resulting APK identity, manifest/components, embedded Hermes payload, signing evidence, ZIP/ELF alignment and SHA-256.
+11. Re-test the previous APK-only findings (FileProvider paths, hardware feature filtering, 16-KB native alignment, predictive-back configuration) against the fresh APK; do not mark them resolved merely because source changed.
+12. Production signing requires only authorised secrets and signer-certificate SHA-256 verification.
+13. Physical-device/provider checks remain separate external gates and cannot be inferred from emulator/static PASS.
 
 ## Locked identity
 
 - Product: AI Console
-- Version: 1.4.0
+- Version: 1.4.2
 - Android package: `com.nexarenew.aiconsole`
-- Android versionCode: 9
-- Framework: Expo SDK 57 / React Native 0.86 CNG
+- Android versionCode: 11
+- Framework: Expo SDK 57 / React Native 0.86.2
+- CI Node: 24
 - Appearance: light only
 
-Do not silently change framework, package identity, release version, security architecture, authorised feature scope or signing identity merely to make CI pass.
+Do not silently change package identity, feature locks, security architecture or signing identity merely to make CI pass.

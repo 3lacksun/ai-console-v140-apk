@@ -1,0 +1,10 @@
+HERMES_STARTUP_SENSITIVE_SCAN
+TextDecoder usages:
+src/utils/rawZipPreflight.mjs:2:const decoder=new TextDecoder('utf-8');
+src/documents/pdfTextExtract.mjs:1:const utf8Decoder = new TextDecoder('utf-8', { fatal: false });
+src/documents/pdfTextExtract.mjs:3:// Hermes does not support TextDecoder('latin1'). PDF parsing needs a byte-preserving
+Forbidden latin1 constructor count:
+0
+Module-scope browser/runtime-sensitive globals:
+src/utils/sha256.mjs:12:const encoder = new TextEncoder();
+src/documents/pdfTextExtract.mjs:1:const utf8Decoder = new TextDecoder('utf-8', { fatal: false });

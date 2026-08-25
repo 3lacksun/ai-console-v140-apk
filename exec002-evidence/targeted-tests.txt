@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: PIN throttle locks after five failures and resets after expiry
+ok 1 - PIN throttle locks after five failures and resets after expiry
+  ---
+  duration_ms: 1.066689
+  type: 'test'
+  ...
+# Subtest: cancelled offline turns can be explicitly retried and interrupted sends recover as failed
+ok 2 - cancelled offline turns can be explicitly retried and interrupted sends recover as failed
+  ---
+  duration_ms: 0.500961
+  type: 'test'
+  ...
+# Subtest: message deletion removes all descendants and stale bookmarks
+ok 3 - message deletion removes all descendants and stale bookmarks
+  ---
+  duration_ms: 2.50874
+  type: 'test'
+  ...
+# Subtest: active chat is always scoped to the active workspace
+ok 4 - active chat is always scoped to the active workspace
+  ---
+  duration_ms: 0.591747
+  type: 'test'
+  ...
+# Subtest: base64 source length is rejected before decoding when over policy
+ok 5 - base64 source length is rejected before decoding when over policy
+  ---
+  duration_ms: 0.438327
+  type: 'test'
+  ...
+# Subtest: SHA-256 implementation matches standard known vectors
+ok 6 - SHA-256 implementation matches standard known vectors
+  ---
+  duration_ms: 0.536974
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 51.685205

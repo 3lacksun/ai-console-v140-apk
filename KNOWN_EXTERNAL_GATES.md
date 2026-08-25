@@ -1,14 +1,13 @@
 # Known External Gates
 
-The repository itself is prepared for GitHub. These acceptance gates still require facilities outside the current local execution environment:
+The startup-blocking source defect is remediated locally. The following acceptance gates still require facilities outside the current execution environment:
 
-1. Clean `npm ci` from `package-lock.json` and the mandatory full zero-skip test suite, including JSZip package/import tests.
-2. Production dependency `npm audit`, `expo install --check`, pinned Expo Doctor, Expo export and clean Expo prebuild.
-3. Gradle preview APK generation and post-build APK package/bundle/signature checks.
-4. Android 16/API-36 emulator cold-launch and process-survival evidence.
-5. Dedicated Android 15 `google_apis_ps16k` emulator evidence with `PAGE_SIZE=16384` and process survival.
-6. Production signing requires real GitHub Secrets: `AI_CONSOLE_ANDROID_KEYSTORE_BASE64`, `AI_CONSOLE_ANDROID_KEYSTORE_PASSWORD`, `AI_CONSOLE_ANDROID_KEY_ALIAS`, `AI_CONSOLE_ANDROID_KEY_PASSWORD`, and `AI_CONSOLE_ANDROID_CERT_SHA256`.
-7. Physical TalkBack, dynamic/large text, keyboard/IME, rotation and rendered-PDF acceptance require suitable devices and manual/device automation evidence.
-8. `expo-speech-recognition ^56.0.1` is startup-guarded and currently the published package line used by the project, but native Expo-57/Android compatibility remains a build/runtime evidence gate.
+1. Clean `npm ci` from the committed lockfile in a complete network/cache environment.
+2. `npm audit --omit=dev --audit-level=high`, `expo install --check`, pinned Expo Doctor, Android Expo export and clean CNG prebuild.
+3. Fresh Gradle preview APK generation from the remediated source.
+4. Mandatory Android 16/API-36 cold-launch, 30-second process survival and **positive `ANDROID_16_APP_READY=PASS` UI evidence** for the same candidate APK.
+5. Mandatory Android 15 `google_apis_ps16k` evidence with `PAGE_SIZE=16384`, install/start, process survival and **positive `ANDROID_16K_APP_READY=PASS` UI evidence** for the same candidate APK.
+6. Production signing requires the authorised GitHub Secrets and certificate SHA-256 verification.
+7. Physical TalkBack, dynamic/large text, keyboard/IME, rotation, camera, microphone, OpenRouter and rendered-output acceptance require suitable device/provider evidence.
 
-A failure at any of these gates is not pre-approved by this repository package and must be remediated before the corresponding acceptance status can become PASS.
+The GitHub workflow is now fail-closed for APK publication: disabling runtime emulator checks is diagnostic-only, recovery-shell UI fails acceptance, and process survival without the real-app readiness marker cannot produce a distributable APK artefact.

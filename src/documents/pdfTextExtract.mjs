@@ -1,7 +1,16 @@
-const latin1Decoder = new TextDecoder('latin1');
 const utf8Decoder = new TextDecoder('utf-8', { fatal: false });
 
-export const bytesToLatin1 = (bytes) => latin1Decoder.decode(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || []));
+// Hermes does not support TextDecoder('latin1'). PDF parsing needs a byte-preserving
+// 1:1 mapping, not WHATWG windows-1252 semantics, so decode explicitly in chunks.
+export const bytesToLatin1 = (input) => {
+  const bytes = input instanceof Uint8Array ? input : new Uint8Array(input || []);
+  const chunkSize = 0x8000;
+  let output = '';
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    output += String.fromCharCode(...bytes.subarray(offset, Math.min(offset + chunkSize, bytes.length)));
+  }
+  return output;
+};
 
 const unescapePdfLiteral = (value) => String(value || '')
   .replace(/\\([0-7]{1,3})/g, (_m, octal) => String.fromCharCode(parseInt(octal, 8)))

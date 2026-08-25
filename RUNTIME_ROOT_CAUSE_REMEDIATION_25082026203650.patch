@@ -1,0 +1,549 @@
+--- a/.github/workflows/android-apk.yml
++++ b/.github/workflows/android-apk.yml
+@@ -12,10 +12,10 @@
+           - preview
+           - production
+       run_emulator_checks:
+-        description: "Run Android 16/API 36 cold-launch plus the dedicated 16-KB page-size/process-survival gates. Keep false for the first APK build; enable after preview APK generation is proven."
++        description: "Run Android 16/API 36 cold-launch plus the dedicated 16-KB page-size/process-survival gates. Disable only for build diagnostics; APK artefacts are not published when disabled."
+         type: boolean
+         required: true
+-        default: false
++        default: true
+   push:
+     branches: [ main ]
+   pull_request:
+@@ -35,7 +35,7 @@
+   ANDROID_16K_AVD_NAME: "ai-console-ps16k-api35"
+   PACKAGE_NAME: "com.nexarenew.aiconsole"
+   SIGNING_MODE: ${{ inputs.signing_mode || 'preview' }}
+-  RUN_EMULATOR_CHECKS: ${{ inputs.run_emulator_checks || 'false' }}
++  RUN_EMULATOR_CHECKS: ${{ github.event_name != 'workflow_dispatch' || inputs.run_emulator_checks }}
+   PREVIEW_APK_NAME: "AI_Console_v1.4.2_preview-debug-signed.apk"
+   PRODUCTION_APK_NAME: "AI_Console_v1.4.2_production-release-signed.apk"
+   DIAGNOSTICS_DIR: "ci-diagnostics"
+@@ -138,7 +138,7 @@
+           if [[ "$RUN_EMULATOR_CHECKS" == "true" ]]; then
+             sdkmanager "emulator" "$ANDROID_16_SYSTEM_IMAGE" "$ANDROID_16K_SYSTEM_IMAGE"
+           else
+-            echo "Runtime emulator diagnostics disabled for this run; skipping emulator and Android ${ANDROID_API_LEVEL} system image installation." | tee "$DIAGNOSTICS_DIR/emulator-gates-disabled.txt"
++            echo "Runtime emulator diagnostics disabled for this diagnostic-only run; no APK artefact will be published." | tee "$DIAGNOSTICS_DIR/emulator-gates-disabled.txt"
+           fi
+           sdkmanager --list_installed | tee "$DIAGNOSTICS_DIR/android-sdk-installed.txt"
+ 
+@@ -348,7 +348,7 @@
+           adb logcat -d > "$DIAGNOSTICS_DIR/android16-logcat-full.txt"
+           PID="$(adb shell pidof "$PACKAGE_NAME" | tr -d '\r[:space:]')"
+           if [[ -z "$PID" ]]; then echo "ANDROID_16_PROCESS_SURVIVAL=FAIL" | tee "$DIAGNOSTICS_DIR/android16-process-survival.txt"; exit 1; fi
+-          if grep -Eqi 'FATAL EXCEPTION|UnsatisfiedLinkError|NoClassDefFoundError|ActivityNotFoundException|ReactNativeJS.*(TypeError|ReferenceError|Invariant Violation|Fatal)|SoLoader|SIGSEGV|ANR|permission denial|Process: com\.nexarenew\.aiconsole.*has died' "$DIAGNOSTICS_DIR/android16-logcat-full.txt"; then
++          if grep -Eqi 'FATAL EXCEPTION|UnsatisfiedLinkError|NoClassDefFoundError|ActivityNotFoundException|ReactNativeJS.*(TypeError|ReferenceError|RangeError|SyntaxError|Invariant Violation|Fatal)|SoLoader|SIGSEGV|ANR|permission denial|Process: com\.nexarenew\.aiconsole.*has died' "$DIAGNOSTICS_DIR/android16-logcat-full.txt"; then
+             echo "ANDROID_16_PROCESS_SURVIVAL=FAIL" | tee "$DIAGNOSTICS_DIR/android16-process-survival.txt"
+             exit 1
+           fi
+@@ -392,12 +392,30 @@
+           adb logcat -d > "$DIAGNOSTICS_DIR/ps16k-logcat-full.txt"
+           PID="$(adb shell pidof "$PACKAGE_NAME" | tr -d '\r[:space:]')"
+           if [[ -z "$PID" ]]; then echo "ANDROID_16K_PROCESS_SURVIVAL=FAIL" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"; exit 1; fi
+-          if grep -Eqi 'FATAL EXCEPTION|UnsatisfiedLinkError|NoClassDefFoundError|ActivityNotFoundException|ReactNativeJS.*(TypeError|ReferenceError|Invariant Violation|Fatal)|SoLoader|SIGSEGV|ANR|permission denial|Process: com\.nexarenew\.aiconsole.*has died' "$DIAGNOSTICS_DIR/ps16k-logcat-full.txt"; then
++          if grep -Eqi 'FATAL EXCEPTION|UnsatisfiedLinkError|NoClassDefFoundError|ActivityNotFoundException|ReactNativeJS.*(TypeError|ReferenceError|RangeError|SyntaxError|Invariant Violation|Fatal)|SoLoader|SIGSEGV|ANR|permission denial|Process: com\.nexarenew\.aiconsole.*has died' "$DIAGNOSTICS_DIR/ps16k-logcat-full.txt"; then
+             echo "ANDROID_16K_PROCESS_SURVIVAL=FAIL" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+             exit 1
+           fi
+           echo "ANDROID_16K_PROCESS_SURVIVAL=PASS" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+ 
++      - name: Release runtime acceptance gate
++        if: ${{ env.RUN_EMULATOR_CHECKS == 'true' }}
++        shell: bash
++        run: |
++          set -euo pipefail
++          grep -Fx 'ANDROID_16_PROCESS_SURVIVAL=PASS' "$DIAGNOSTICS_DIR/android16-process-survival.txt"
++          grep -Fx 'EMULATOR_PAGE_SIZE_16K=PASS' "$DIAGNOSTICS_DIR/android-16k-gates.txt"
++          grep -Fx 'ANDROID_16K_PROCESS_SURVIVAL=PASS' "$DIAGNOSTICS_DIR/android-16k-gates.txt"
++          echo 'RELEASE_RUNTIME_ACCEPTANCE=PASS' | tee "$DIAGNOSTICS_DIR/release-runtime-acceptance.txt"
++
++      - name: Record diagnostic-only build when runtime gates are disabled
++        if: ${{ env.RUN_EMULATOR_CHECKS != 'true' }}
++        shell: bash
++        run: |
++          set -euo pipefail
++          echo 'RELEASE_RUNTIME_ACCEPTANCE=NOT_EXECUTED' | tee "$DIAGNOSTICS_DIR/release-runtime-acceptance.txt"
++          echo 'APK publication is intentionally blocked because Android runtime acceptance did not execute.' | tee -a "$DIAGNOSTICS_DIR/release-runtime-acceptance.txt"
++
+       - name: Crash diagnostics capture
+         if: always()
+         shell: bash
+@@ -415,7 +433,7 @@
+             echo "UNSATISFIED_LINK_ERROR=$(grep -Eai 'UnsatisfiedLinkError' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+             echo "NO_CLASS_DEF_FOUND=$(grep -Eai 'NoClassDefFoundError' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+             echo "ACTIVITY_NOT_FOUND=$(grep -Eai 'ActivityNotFoundException' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+-            echo "REACT_NATIVE_JS_FATAL=$(grep -Eai 'ReactNativeJS.*(Fatal|TypeError|ReferenceError|Invariant Violation)' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
++            echo "REACT_NATIVE_JS_FATAL=$(grep -Eai 'ReactNativeJS.*(Fatal|TypeError|ReferenceError|RangeError|SyntaxError|Invariant Violation)' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+             echo "SOLOADER_FAILURE=$(grep -Eai 'SoLoader' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+             echo "SIGSEGV_OR_TOMBSTONE=$(grep -Eai 'SIGSEGV|tombstone' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+             echo "ANR=$(grep -Eai 'ANR' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+@@ -446,7 +464,7 @@
+           if [[ -n "${APK_PATH:-}" && -f "$APK_PATH" ]]; then sha256sum "$APK_PATH" | tee "$DIAGNOSTICS_DIR/apk-sha256.txt"; fi
+ 
+       - name: Upload APK artefact
+-        if: always()
++        if: ${{ success() && env.RUN_EMULATOR_CHECKS == 'true' }}
+         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+         with:
+           name: ${{ env.SIGNING_MODE == 'production' && 'AI_Console_v1.4.2_production-release-signed' || 'AI_Console_v1.4.2_preview-debug-signed' }}
+--- a/src/documents/pdfTextExtract.mjs
++++ b/src/documents/pdfTextExtract.mjs
+@@ -1,7 +1,16 @@
+-const latin1Decoder = new TextDecoder('latin1');
+ const utf8Decoder = new TextDecoder('utf-8', { fatal: false });
+ 
+-export const bytesToLatin1 = (bytes) => latin1Decoder.decode(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || []));
++// Hermes does not support TextDecoder('latin1'). PDF parsing needs a byte-preserving
++// 1:1 mapping, not WHATWG windows-1252 semantics, so decode explicitly in chunks.
++export const bytesToLatin1 = (input) => {
++  const bytes = input instanceof Uint8Array ? input : new Uint8Array(input || []);
++  const chunkSize = 0x8000;
++  let output = '';
++  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
++    output += String.fromCharCode(...bytes.subarray(offset, Math.min(offset + chunkSize, bytes.length)));
++  }
++  return output;
++};
+ 
+ const unescapePdfLiteral = (value) => String(value || '')
+   .replace(/\\([0-7]{1,3})/g, (_m, octal) => String.fromCharCode(parseInt(octal, 8)))
+--- a/tests/startupRuntimeResilience.test.mjs
++++ b/tests/startupRuntimeResilience.test.mjs
+@@ -9,6 +9,7 @@
+ const workflow = fs.readFileSync(fs.existsSync(workflowPath) ? workflowPath : legacyWorkflowPath, 'utf8');
+ const errorBoundarySource = fs.readFileSync(new URL('../src/components/AppErrorBoundary.js', import.meta.url), 'utf8');
+ const speechAdapterSource = fs.readFileSync(new URL('../src/voice/speechRecognitionAdapter.mjs', import.meta.url), 'utf8');
++const pdfExtractorSource = fs.readFileSync(new URL('../src/documents/pdfTextExtract.mjs', import.meta.url), 'utf8');
+ 
+ 
+ test('root render failures degrade to a recoverable shell instead of an uncaught blank/crash path', () => {
+@@ -36,6 +37,14 @@
+   assert.match(appSource, /if \(!hydrated \|\| hydrationDegradedRef\.current\) return undefined;/);
+ });
+ 
++
++test('startup import graph contains no unsupported latin1 TextDecoder and byte mapping is exact', async () => {
++  assert.doesNotMatch(pdfExtractorSource, /new\s+TextDecoder\(\s*['"]latin1['"]/i);
++  const { bytesToLatin1 } = await import('../src/documents/pdfTextExtract.mjs');
++  const decoded = bytesToLatin1(new Uint8Array([0x00, 0x41, 0x7f, 0x80, 0xff]));
++  assert.deepEqual(Array.from(decoded, (character) => character.charCodeAt(0)), [0x00, 0x41, 0x7f, 0x80, 0xff]);
++});
++
+ test('Android speech package visibility covers modern and legacy Google services', () => {
+   const plugin = appConfig.expo.plugins.find((entry) => Array.isArray(entry) && entry[0] === 'expo-speech-recognition');
+   assert.ok(plugin);
+@@ -43,22 +52,23 @@
+   assert.ok(plugin[1].androidSpeechServicePackages.includes('com.google.android.tts'));
+ });
+ 
+-test('CI verifies SDK 57 tooling, 16 KB alignment and actual cold launch', () => {
+-  assert.match(workflow, /NODE_VERSION: \"24\"/);
++test('CI requires executed Android cold-launch gates before an APK artefact can be published', () => {
++  assert.match(workflow, /NODE_VERSION: "24"/);
+   assert.match(workflow, /expo install --check/);
+   assert.match(workflow, /APK_ZIPALIGN_16K/);
+   assert.match(workflow, /APK_NATIVE_ELF_16K/);
+   assert.match(workflow, /EMULATOR_PAGE_SIZE_16K/);
+-  assert.match(workflow, /ANDROID_16_PROCESS_SURVIVAL/);
+-  assert.match(workflow, /zipalign/);
+-  assert.match(workflow, /-P 16/);
++  assert.match(workflow, /ANDROID_16_PROCESS_SURVIVAL=PASS/);
++  assert.match(workflow, /ANDROID_16K_PROCESS_SURVIVAL=PASS/);
+   assert.match(workflow, /system-images;android-36;google_apis;x86_64/);
+   assert.match(workflow, /system-images;android-35;google_apis_ps16k;x86_64/);
++  assert.match(workflow, /default:\s*true/);
++  assert.match(workflow, /github\.event_name != 'workflow_dispatch' \|\| inputs\.run_emulator_checks/);
++  assert.match(workflow, /name:\s*Release runtime acceptance gate[\s\S]*grep -Fx 'ANDROID_16_PROCESS_SURVIVAL=PASS'[\s\S]*grep -Fx 'ANDROID_16K_PROCESS_SURVIVAL=PASS'/);
++  assert.match(workflow, /name:\s*Upload APK artefact[\s\S]*if:\s*\$\{\{ success\(\) && env\.RUN_EMULATOR_CHECKS == 'true' \}\}/);
+   assert.match(workflow, /runs-on: ubuntu-24\.04/);
+   assert.match(workflow, /npm audit --omit=dev --audit-level=high/);
+   assert.match(workflow, /expo-doctor@1\.20\.2/);
+-  assert.match(workflow, /ANDROID_16_PROCESS_SURVIVAL=PASS/);
+-  assert.match(workflow, /ANDROID_16K_PROCESS_SURVIVAL=PASS/);
+   assert.match(workflow, /app:assembleDebug/);
+   assert.match(workflow, /app:assembleRelease/);
+ });
+--- a/scripts/static-check.mjs
++++ b/scripts/static-check.mjs
+@@ -36,10 +36,11 @@
+ assert(workflow.includes('cache-dependency-path: package-lock.json')&&workflow.includes('AI_Console_v1.4.2_preview-debug-signed')&&workflow.includes('AI_Console_v1.4.2_production-release-signed')&&workflow.includes('android/app/build/outputs/apk/release/app-release.apk'),'CI path/artifact identity drift');
+ assert(workflow.includes('actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803')&&workflow.includes('actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38')&&workflow.includes('actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961')&&workflow.includes('android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699')&&workflow.includes('actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f'),'immutable GitHub Action SHA pinning missing or drifted');
+ assert(workflow.includes('android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699')&&workflow.includes('command -v sdkmanager')&&workflow.includes('ANDROID_SDK_ROOT'),'Android SDK command-line tool bootstrap is missing');
+-assert(workflow.includes('default: false')&&workflow.includes('RUN_EMULATOR_CHECKS')&&workflow.includes('Runtime emulator diagnostics disabled for this run'),'runtime emulator/16-KB diagnostics must be optional and disabled by default for first preview APK CI');
++assert(workflow.includes('default: true')&&workflow.includes("github.event_name != 'workflow_dispatch' || inputs.run_emulator_checks")&&workflow.includes('Release runtime acceptance gate')&&workflow.includes("success() && env.RUN_EMULATOR_CHECKS == 'true'")&&workflow.includes('no APK artefact will be published'),'runtime emulator/16-KB release acceptance must default on and APK publication must fail closed when disabled');
+ assert(workflow.includes('node scripts/verify-runtime-contract.mjs'),'runtime contract verifier is not wired into CI');
+ assert(!workflow.includes('generated-android-prebuild.tgz')&&workflow.includes('generated-android-config'),'CI diagnostics must exclude the generated Android build tree/APK duplication');
+ 
++assert(!read('src/documents/pdfTextExtract.mjs').match(/new\s+TextDecoder\(\s*['\"]latin1['\"]/i),'Hermes-unsupported latin1 TextDecoder remains on the startup import path');
+ assert(!source.includes("from 'expo-speech-recognition'")&&!source.includes("require('expo-speech-recognition')")&&source.includes('loadSpeechRecognitionModule')&&source.includes('speechRecognitionAdapter.mjs'),'speech recognition must be loaded only through the validated startup-safe adapter');
+ assert(source.includes("import AppErrorBoundary from './src/components/AppErrorBoundary'")&&source.includes('<AppErrorBoundary><AIConsoleApp /></AppErrorBoundary>'),'root React error boundary missing');
+ assert(source.includes('Startup recovery mode: saved state could not be restored safely')&&source.includes('hydrationDegradedRef.current'),'startup hydration recovery/overwrite protection missing');
+--- a/README.md
++++ b/README.md
+@@ -28,13 +28,13 @@
+ 1. Extract the repository ZIP so `package.json`, `app.json`, `App.js` and `.github/` are at repository root.
+ 2. Commit and push the extracted files to the repository's `main` branch.
+ 3. GitHub Actions runs `.github/workflows/android-apk.yml` automatically on push/PR, or it can be started with **workflow_dispatch**.
+-4. For the first manual build use `signing_mode=preview` and `run_emulator_checks=false`.
+-5. Download the `AI_Console_v1.4.2_preview-debug-signed` Actions artefact after the workflow succeeds.
+-6. After APK generation is proven, run again with `run_emulator_checks=true` to execute Android 16/API-36 cold-launch and dedicated 16-KB runtime gates.
++4. For a publishable preview candidate use `signing_mode=preview` and keep `run_emulator_checks=true` (the default).
++5. Download the `AI_Console_v1.4.2_preview-debug-signed` Actions artefact only after the same workflow run passes both runtime gates.
++6. A manual run may set `run_emulator_checks=false` only for build diagnostics; that mode deliberately does not publish an APK artefact.
+ 
+ ## CI gates
+ 
+-The workflow performs exact lockfile installation, production dependency audit, source/static tests, the full zero-skip Node test suite, SDK/package drift checks, pinned Expo Doctor, Android bundle export, clean Expo prebuild, Gradle APK build, APK/package inspection, signer verification, 16-KB ZIP/ELF alignment, optional Android 16 runtime survival and optional dedicated 16-KB runtime survival.
++The workflow performs exact lockfile installation, production dependency audit, source/static tests, the full zero-skip Node test suite, SDK/package drift checks, pinned Expo Doctor, Android bundle export, clean Expo prebuild, Gradle APK build, APK/package inspection, signer verification, 16-KB ZIP/ELF alignment, mandatory-for-publication Android 16 runtime survival and dedicated 16-KB runtime survival.
+ 
+ GitHub Actions dependencies are pinned to immutable full commit SHAs. Workflow permissions are `contents: read`.
+ 
+--- a/docs/BUILDING.md
++++ b/docs/BUILDING.md
+@@ -85,6 +85,8 @@
+ 
+ Before either runtime gate, CI also checks APK ZIP alignment with `zipalign -c -P 16 -v 4` and checks 64-bit native ELF LOAD alignment.
+ 
++For release candidates these runtime gates are fail-closed: `run_emulator_checks=true` is the default for push/PR and manual release-candidate runs, and the APK artefact upload step is blocked unless the gates actually execute and pass. A manual false value is diagnostic-only.
++
+ ## GitHub build
+ 
+ Use `.github/workflows/android-apk.yml`. The source ZIP is intended to be extracted directly at repository root. No pre-generated `android/`, `node_modules/`, APK or signing material is required in Git.
+--- a/docs/RELEASING.md
++++ b/docs/RELEASING.md
+@@ -1,15 +1,15 @@
+-# Releasing AI Console v1.4.0
++# Releasing AI Console v1.4.2
+ 
+ ## Preview APK
+ 
+ Run the **AI Console Android APK CI** workflow with:
+ 
+ - `signing_mode`: `preview`
+-- `run_emulator_checks`: `false` for the first build
++- `run_emulator_checks`: `true` (default; required for APK artefact publication)
+ 
+-The workflow builds `app:assembleDebug`, verifies Android Debug signer evidence and uploads `AI_Console_v1.4.0_preview-debug-signed.apk` plus diagnostics.
++The workflow builds `app:assembleDebug`, verifies Android Debug signer evidence and uploads `AI_Console_v1.4.2_preview-debug-signed.apk` only after the Android runtime acceptance gates pass. Diagnostics are retained even when the runtime gates fail or are intentionally disabled.
+ 
+-After the preview build succeeds, rerun manually with `run_emulator_checks: true`. That execution performs two independent runtime checks: Android 16/API 36 cold-launch survival and the dedicated Android 15 `google_apis_ps16k` 16-KB runtime gate.
++APK publication requires the runtime gates to execute in the same candidate workflow. `run_emulator_checks: true` is the default and performs two independent runtime checks: Android 16/API 36 cold-launch survival and the dedicated Android 15 `google_apis_ps16k` 16-KB runtime gate. Setting it to false is diagnostic-only and blocks APK artefact publication.
+ 
+ ## Production APK
+ 
+@@ -32,8 +32,8 @@
+ - `apksigner` certificate evidence;
+ - `zipalign -P 16` evidence;
+ - native ELF alignment evidence;
+-- Android 16/API-36 install/start/process-survival logs when enabled;
+-- dedicated 16-KB page-size/install/start/process-survival logs when enabled;
++- Android 16/API-36 install/start/process-survival logs for every published APK candidate;
++- dedicated 16-KB page-size/install/start/process-survival logs for every published APK candidate;
+ - npm/static/test/Expo validation output from the same workflow run.
+ 
+ ## Release acceptance
+--- a/GITHUB_READY_STATUS.md
++++ b/GITHUB_READY_STATUS.md
+@@ -1,52 +1,33 @@
+-# AI Console v1.4.2 — GitHub Repository Readiness
++# AI Console v1.4.2 — GitHub Rebuild Readiness
+ 
+-Prepared: 24/08/2026
++Updated: 25/08/2026 20:36:50 BST
+ 
+-## Repository-root contract
++## Current decision
+ 
+-This package is intended to be extracted directly into the root of the GitHub repository.
++**READY FOR GITHUB REBUILD — PREVIOUS APK REJECTED — FRESH APK RUNTIME VERIFICATION REQUIRED.**
+ 
+-Required GitHub build inputs are present, including `package.json`, `package-lock.json`, `index.js`, `App.js`, `app.json`, assets, tests, verification scripts, and `.github/workflows/android-apk.yml`.
++The previously distributed v1.4.2 APK is not an acceptable release candidate. Its Hermes startup path evaluated `new TextDecoder('latin1')` during module import, causing the confirmed Android startup failure. The source has now been remediated to use deterministic byte-preserving decoding without `TextDecoder('latin1')`.
+ 
+-## GitHub Actions workflow
++## Remediation completed
+ 
+-The Android workflow:
++- Removed the Hermes-unsupported `TextDecoder('latin1')` constructor from `src/documents/pdfTextExtract.mjs`.
++- Added an executable regression test that verifies both absence of the unsupported constructor and exact byte-to-codepoint mapping for `0x00`, `0x80` and `0xFF`.
++- Changed Android CI so runtime emulator checks default on for push/PR and manual release-candidate runs.
++- Added a release runtime acceptance gate that requires both Android 16/API-36 process survival and dedicated 16-KB runtime survival evidence.
++- Changed APK artefact publication to fail closed when runtime checks are disabled or fail.
++- Corrected release/build/handover documentation that previously encouraged a first build with runtime checks disabled.
+ 
+-- supports push, pull request, and manual dispatch;
+-- installs exact npm dependencies with `npm ci`;
+-- runs static checks and the full zero-skip test suite;
+-- verifies Expo package alignment and runtime contracts;
+-- runs Expo dependency/doctor and Metro export checks;
+-- prebuilds Android and verifies generated compile/target SDK 36 configuration;
+-- builds a preview debug-signed APK by default;
+-- supports production signing only when the required GitHub Secrets are configured;
+-- verifies APK package/version, embedded JS/Hermes payload, signing, ZIP alignment and native ELF 16-KB alignment;
+-- optionally runs Android 16/API 36 and dedicated 16-KB emulator process-survival gates;
+-- uploads the APK and diagnostics as GitHub Actions artefacts.
++## Local verification
+ 
+-All external GitHub Action references are pinned to immutable 40-character commit SHAs.
++- `npm run check`: **PASS**.
++- Full Node test suite with the exact `jszip 3.10.1` test dependency supplied from the preinstalled local toolchain: **75/75 PASS, 0 skipped**.
++- Dedicated startup-resilience tests: **6/6 PASS**.
++- Startup-sensitive API scan after remediation: no `TextDecoder('latin1')` remains; remaining module-scope decoder usage is UTF-8.
++- Clean `npm ci`: **NOT_EXECUTABLE_HERE / ENVIRONMENT BLOCKED** because registry restoration did not complete in the available execution window. The interrupted install must not be treated as a clean dependency-verification PASS.
++- Expo export / clean prebuild / Gradle APK build: **NOT_EXECUTED** locally because the clean dependency environment was not established.
+ 
+-## Local preparation evidence
++## Release rule
+ 
+-- `scripts/ci-version-guard.mjs`: PASS
+-- `scripts/static-check.mjs`: PASS
+-- `scripts/verify-runtime-contract.mjs`: PASS
+-- workflow YAML parse: PASS
+-- immutable GitHub Action pin check: PASS
+-- forbidden secret/keystore/local.properties package scan: PASS
+-- focused post-remediation regression slice previously executed: 35/35 PASS, 0 skipped
+-- clean `npm ci` in the current sandbox: UNVERIFIABLE because registry restoration did not complete within the execution window
++A newly built APK is not accepted merely because Gradle, signing, ZIP alignment or static tests pass. The same candidate must complete the Android 16/API-36 cold-launch/process-survival gate and the dedicated 16-KB runtime gate before the workflow publishes the APK artefact.
+ 
+-The GitHub workflow therefore remains the authoritative clean dependency/build environment. A successful workflow run is required before claiming APK/runtime/release PASS.
+-
+-## Production signing secrets
+-
+-For `signing_mode=production`, configure these GitHub Actions secrets:
+-
+-- `AI_CONSOLE_ANDROID_KEYSTORE_BASE64`
+-- `AI_CONSOLE_ANDROID_KEYSTORE_PASSWORD`
+-- `AI_CONSOLE_ANDROID_KEY_ALIAS`
+-- `AI_CONSOLE_ANDROID_KEY_PASSWORD`
+-- `AI_CONSOLE_ANDROID_CERT_SHA256`
+-
+-Do not commit the keystore or these values to the repository.
++Production signing remains separately gated by the authorised GitHub Secrets and certificate SHA-256 verification.
+--- a/VERIFICATION_STATUS.md
++++ b/VERIFICATION_STATUS.md
+@@ -1,36 +1,29 @@
+-# AI Console v1.4.2 — GitHub-Ready Verification Status
++# AI Console v1.4.2 — Runtime Root-Cause Remediation Verification
+ 
+-Generated: 24/08/2026 03:01:41 BST
++Generated: 25/08/2026 20:36:50 BST
+ 
+-| Gate | Status | Current evidence |
++| Gate | Status | Evidence |
+ |---|---:|---|
+-| Current Master Rules bootstrap | PASS | v1.2.14 / revision 20260823-02 used for this repository-preparation run. |
+-| Audited baseline SHA-256 | PASS | `64ac622862b3f22a9826582b955a35824341ef5f8e53e825e803f138f67fe72b` matched. |
+-| Audited hotfix SHA-256 | PASS | `85f33226150bd4a6c25c11e4648ba26d75f4119ac02d955be923d449689c4c0d` matched. |
+-| Input ZIP integrity/traversal checks | PASS | Both received inputs tested before composition. |
+-| GitHub repository-root structure | PASS | App, lockfile, workflow, scripts, tests, assets, specifications and repository support files present. |
+-| GitHub Action immutability | PASS | checkout/setup-node/setup-java/setup-android/upload-artifact use verified full commit SHAs. |
+-| Workflow permissions | PASS | `contents: read`. |
+-| Fixed hosted runner | PASS | `ubuntu-24.04`. |
+-| Workflow YAML parse | PASS | Current workflow parsed after final CI restructuring. |
+-| Static repository checks | PASS | `STATIC_CHECK: PASS`. |
+-| SDK/package version guard | PASS | `CI_VERSION_GUARD: PASS`; speech native compatibility remains a runtime gate. |
+-| Runtime contract verifier | PASS | `RUNTIME_CONTRACT: PASS`. |
+-| Locally executable test set | PASS | 54/54 PASS, 0 skipped, excluding only the package test file whose required `jszip` installation is absent locally. |
+-| Full zero-skip test suite | UNVERIFIABLE locally | The release-critical JSZip test intentionally fails to load when dependencies are not restored. GitHub runs it after `npm ci`. |
+-| Clean `npm ci` | UNVERIFIABLE locally | Registry resolution is unavailable/incomplete in this execution environment. |
+-| Production dependency audit | UNVERIFIABLE locally | Configured as a blocking GitHub Actions gate after `npm ci`. |
+-| Expo install check / pinned Expo Doctor | UNVERIFIABLE locally | Configured as blocking GitHub Actions gates. |
+-| Expo export / clean CNG prebuild | UNVERIFIABLE locally | Configured as blocking GitHub Actions gates. |
+-| Preview APK build | UNVERIFIABLE | Workflow now builds `assembleDebug`; no fresh GitHub run has occurred. |
+-| Production APK build/signing | UNVERIFIABLE | Workflow builds `assembleRelease` only with authorised GitHub Secrets and verifies signer SHA-256. |
+-| APK ZIP/ELF 16-KB alignment | UNVERIFIABLE | Blocking post-build gates configured; no APK built in this run. |
+-| Android 16 / API-36 cold launch | UNVERIFIABLE | Optional CI emulator gate uses `system-images;android-36;google_apis;x86_64`. |
+-| Dedicated 16-KB runtime | UNVERIFIABLE | Optional CI gate uses `system-images;android-35;google_apis_ps16k;x86_64` and requires `PAGE_SIZE=16384`. |
+-| Physical TalkBack/large-font/keyboard/rotation | UNVERIFIABLE | Requires real-device acceptance. |
++| Master Rules bootstrap | PASS | v1.2.15 / revision 20260825-01 already loaded in the current continuous task/session. |
++| Input source ZIP integrity | PASS | Baseline SHA-256 `e2c8e6d6e26f822041d6549c2f53dcfc38d9ceb7f2f422c1f30bd56f52771cf7`. |
++| Root-cause diagnosis | PASS | Startup import chain reached `new TextDecoder('latin1')`; matching broken code was present in the source used for the failed APK. |
++| Hermes latin1 remediation | PASS | Unsupported constructor removed; explicit byte-preserving chunk decoder implemented. |
++| Regression guard | PASS | New startup test rejects `TextDecoder('latin1')` and verifies exact byte mapping. |
++| Static repository checks | PASS | `npm run check` => `STATIC_CHECK: PASS`. |
++| Full locally executable test suite | PASS | 75/75 PASS, 0 skipped, with exact `jszip 3.10.1` supplied locally for release-critical archive tests. |
++| Clean `npm ci` | NOT_EXECUTABLE_HERE | Registry restoration timed out; offline retry failed because `zod-3.25.76.tgz` was not cached. |
++| `npm audit` / Expo install check / Expo Doctor | NOT_EXECUTED | Requires completed clean dependency restore. |
++| Metro/Expo Android export | NOT_EXECUTED | Attempt could not complete because clean dependency restoration was not established. |
++| Fresh APK build | NOT_EXECUTED | Requires GitHub/Android build environment. |
++| Android 16/API-36 cold launch | NOT EXECUTED | Workflow now defaults this gate on and blocks APK publication without it. |
++| Dedicated 16-KB runtime | NOT EXECUTED | Workflow now requires PAGE_SIZE=16384 plus install/start/process survival before publication. |
++| Production signing | UNVERIFIABLE | Requires authorised secrets and certificate identity. |
++| Physical-device acceptance | UNVERIFIABLE | Requires actual Android-device execution. |
+ 
+ ## Decision
+ 
+-**READY FOR GITHUB — APK BUILD NOT VERIFIED.**
++**SOURCE REMEDIATION: PASS.**
+ 
+-There is no known locally actionable repository-structure or CI-definition defect remaining from this pass. The remaining gates require dependency/network, GitHub Actions, Android emulator/device, signing secrets, or physical-device facilities. A GitHub workflow failure remains a failure to remediate; this status does not pre-approve the resulting APK.
++**PREVIOUS APK: NO-GO.**
++
++**FRESH APK RELEASE READINESS: UNVERIFIABLE UNTIL BUILD + MANDATORY RUNTIME GATES EXECUTE.**
+--- a/KNOWN_EXTERNAL_GATES.md
++++ b/KNOWN_EXTERNAL_GATES.md
+@@ -1,14 +1,13 @@
+ # Known External Gates
+ 
+-The repository itself is prepared for GitHub. These acceptance gates still require facilities outside the current local execution environment:
++The startup-blocking source defect is remediated locally. The following acceptance gates still require facilities outside the current execution environment:
+ 
+-1. Clean `npm ci` from `package-lock.json` and the mandatory full zero-skip test suite, including JSZip package/import tests.
+-2. Production dependency `npm audit`, `expo install --check`, pinned Expo Doctor, Expo export and clean Expo prebuild.
+-3. Gradle preview APK generation and post-build APK package/bundle/signature checks.
+-4. Android 16/API-36 emulator cold-launch and process-survival evidence.
+-5. Dedicated Android 15 `google_apis_ps16k` emulator evidence with `PAGE_SIZE=16384` and process survival.
+-6. Production signing requires real GitHub Secrets: `AI_CONSOLE_ANDROID_KEYSTORE_BASE64`, `AI_CONSOLE_ANDROID_KEYSTORE_PASSWORD`, `AI_CONSOLE_ANDROID_KEY_ALIAS`, `AI_CONSOLE_ANDROID_KEY_PASSWORD`, and `AI_CONSOLE_ANDROID_CERT_SHA256`.
+-7. Physical TalkBack, dynamic/large text, keyboard/IME, rotation and rendered-PDF acceptance require suitable devices and manual/device automation evidence.
+-8. `expo-speech-recognition ^56.0.1` is startup-guarded and currently the published package line used by the project, but native Expo-57/Android compatibility remains a build/runtime evidence gate.
++1. Clean `npm ci` from the committed lockfile in a complete network/cache environment.
++2. `npm audit --omit=dev --audit-level=high`, `expo install --check`, pinned Expo Doctor, Android Expo export and clean CNG prebuild.
++3. Fresh Gradle preview APK generation from the remediated source.
++4. Mandatory Android 16/API-36 cold-launch and 30-second process-survival evidence for the same candidate APK.
++5. Mandatory Android 15 `google_apis_ps16k` evidence with `PAGE_SIZE=16384`, install/start and process survival for the same candidate APK.
++6. Production signing requires the authorised GitHub Secrets and certificate SHA-256 verification.
++7. Physical TalkBack, dynamic/large text, keyboard/IME, rotation, camera, microphone, OpenRouter and rendered-output acceptance require suitable device/provider evidence.
+ 
+-A failure at any of these gates is not pre-approved by this repository package and must be remediated before the corresponding acceptance status can become PASS.
++The GitHub workflow is now fail-closed for APK publication: disabling runtime emulator checks is diagnostic-only and must not produce a distributable APK artefact.
+--- a/NEXT_LLM_HANDOVER_PROMPT.md
++++ b/NEXT_LLM_HANDOVER_PROMPT.md
+@@ -1,36 +1,34 @@
+-# AI Console v1.4.0 — GitHub Continuation Prompt
++# AI Console v1.4.2 — Runtime-Fix Rebuild Continuation Prompt
+ 
+-You are the continuation LLM responsible for taking `AI_CONSOLE_V1_4_0_GITHUB_READY_EXEC002_24082026030345.zip` through a fresh GitHub repository/Actions APK build and truthful verification.
++Continue from `AI_CONSOLE_V1_4_2_RUNTIME_CRASH_REMEDIATED_SOURCE_25082026203650.zip`. Do not use the previously distributed v1.4.2 APK as an accepted baseline; it is NO-GO because its Hermes startup path contained `TextDecoder('latin1')`.
+ 
+-Before substantive work, retrieve and read the complete current `/Master Documents/MASTER_LLM_OPERATING_RULES.md` from the connected Library. The package was prepared under Master Rules v1.2.14 / revision 20260823-02; the Library remains authoritative if a newer authorised revision exists. If the current rules cannot be retrieved, state exactly `MASTER RULE BOOTSTRAP: UNVERIFIABLE` and continue only with available evidence.
++Before substantive work, retrieve/read the current `/Master Documents/MASTER_LLM_OPERATING_RULES.md`.
+ 
+ ## Required sequence
+ 
+-1. Verify the external ZIP SHA-256 supplied with the package.
+-2. Extract the ZIP directly as the GitHub repository root; `package.json`, `app.json`, `App.js` and `.github/` must be at root.
+-3. Read `README.md`, `REMEDIATION_REPORT.md`, `VERIFICATION_STATUS.md`, `KNOWN_EXTERNAL_GATES.md`, the three full v1.4.0 specifications under `docs/`, `FILE_INVENTORY.txt`, `SHA256SUMS.txt`, `.github/workflows/android-apk.yml`, `package.json`, `package-lock.json` and `app.json`.
+-4. Verify the embedded `SHA256SUMS.txt` before changing source.
+-5. In a clean dependency environment run `npm ci --no-fund`, then `npm audit --omit=dev --audit-level=high`.
+-6. Run `npm run check`, `npm test`, `node scripts/ci-version-guard.mjs`, and `node scripts/verify-runtime-contract.mjs`. The full suite is release-critical: no test or JSZip archive round trip may be skipped.
+-7. Run `npx expo install --check` and `npx --yes expo-doctor@1.20.2`.
+-8. Confirm the intended GitHub repository target before any remote write. This handover does not itself authorise overwriting an unrelated repository or history.
+-9. Use `.github/workflows/android-apk.yml`; external Actions are already pinned to immutable full commit SHAs.
+-10. Run preview first with `signing_mode=preview` and `run_emulator_checks=false`. Preview must build the debug variant and verify Android Debug signer evidence.
+-11. Preserve and inspect the APK and diagnostic Actions artefacts from the same workflow run.
+-12. After preview APK generation succeeds, rerun with `run_emulator_checks=true`. Do not conflate the two runtime gates: Android 16/API-36 cold launch uses the API-36 image; full 16-KB runtime evidence uses the dedicated Android-15 `google_apis_ps16k` image and must prove `PAGE_SIZE=16384`.
+-13. Do not mark 16-KB acceptance PASS unless the same candidate establishes `APK_ZIPALIGN_16K=PASS`, `APK_NATIVE_ELF_16K=PASS`, `EMULATOR_PAGE_SIZE_16K=PASS`, and `ANDROID_16K_PROCESS_SURVIVAL=PASS`.
+-14. Do not mark Android 16 runtime acceptance PASS unless the API-36 cold-launch gate establishes `ANDROID_16_PROCESS_SURVIVAL=PASS`.
+-15. For production, configure the authorised GitHub Secrets listed in `docs/RELEASING.md`; production must build the release variant and verify the resulting signer SHA-256 against `AI_CONSOLE_ANDROID_CERT_SHA256` without logging secret values.
+-16. If any CI/build/runtime gate fails, repair the root cause and rerun the affected and regression gates. Do not treat this package's GitHub-ready status as pre-approval of an APK.
+-17. Return PASS / FAIL / PARTIAL / UNVERIFIABLE classifications for dependency restoration, source tests, preview APK, production signing, Android 16 runtime, dedicated 16-KB runtime, and physical-device acceptance.
++1. Verify the handover ZIP SHA-256 and embedded checksum manifest before changing source.
++2. Extract directly at repository root.
++3. Confirm `src/documents/pdfTextExtract.mjs` contains the explicit byte-preserving `bytesToLatin1` implementation and contains no `TextDecoder('latin1')`.
++4. Run clean `npm ci --no-fund`; then `npm audit --omit=dev --audit-level=high`.
++5. Run `npm run check`, `npm test`, `node scripts/ci-version-guard.mjs`, and `node scripts/verify-runtime-contract.mjs`; no release-critical skip is permitted.
++6. Run `npx expo install --check` and pinned Expo Doctor.
++7. Build the preview candidate through `.github/workflows/android-apk.yml`. Keep `run_emulator_checks=true` for any candidate intended for distribution.
++8. Require the same candidate to establish `ANDROID_16_PROCESS_SURVIVAL=PASS`, `EMULATOR_PAGE_SIZE_16K=PASS`, and `ANDROID_16K_PROCESS_SURVIVAL=PASS`.
++9. Do not accept a workflow/test that merely searches YAML/log text for PASS tokens as runtime proof; verify the emulator steps actually executed.
++10. Only after the runtime acceptance gate passes may the workflow publish/download the APK artefact.
++11. Inspect the resulting APK package/version, embedded Hermes payload, signing evidence, ZIP/ELF alignment and SHA-256.
++12. For production, use only authorised signing secrets and verify the signer certificate SHA-256.
++13. Physical-device/provider checks remain separate external gates and cannot be inferred from emulator/static PASS.
++14. If any build/runtime gate fails, diagnose and remediate the root cause before producing another accepted artefact.
+ 
+ ## Locked identity
+ 
+ - Product: AI Console
+-- Version: 1.4.0
++- Version: 1.4.2
+ - Android package: `com.nexarenew.aiconsole`
+-- Android versionCode: 9
+-- Framework: Expo SDK 57 / React Native 0.86 CNG
++- Android versionCode: 11
++- Framework: Expo SDK 57 / React Native 0.86.2
++- CI Node: 24
+ - Appearance: light only
+ 
+-Do not silently change framework, package identity, release version, security architecture, authorised feature scope or signing identity merely to make CI pass.
++Do not silently change package identity, feature locks, security architecture or signing identity merely to make CI pass.
+--- a/EXEC002_REMEDIATION_REPORT.md
++++ b/EXEC002_REMEDIATION_REPORT.md
+@@ -1,5 +1,8 @@
+ # AI Console v1.4.2 EXEC002 Remediation Report
+ 
++> **SUPERSEDED RUNTIME STATUS (25/08/2026):** A startup-blocking Hermes `TextDecoder('latin1')` defect was later confirmed in the distributed v1.4.2 APK and remediated in source. The failed APK is NO-GO. See `RUNTIME_ROOT_CAUSE_REMEDIATION_REPORT_25082026203650.md` and `VERIFICATION_STATUS.md` for current status.
++
++
+ Generated: 24/08/2026 Europe/London
+ 
+ ## Baseline
+--- a/CI_STABILIZATION_REPORT.md
++++ b/CI_STABILIZATION_REPORT.md
+@@ -1,5 +1,8 @@
+ # AI Console v1.4.0 — CI Stabilisation Report
+ 
++> **SUPERSEDED RUNTIME STATUS (25/08/2026):** A startup-blocking Hermes `TextDecoder('latin1')` defect was later confirmed in the distributed v1.4.2 APK and remediated in source. The failed APK is NO-GO. See `RUNTIME_ROOT_CAUSE_REMEDIATION_REPORT_25082026203650.md` and `VERIFICATION_STATUS.md` for current status.
++
++
+ ## Status
+ 
+ PARTIAL. The package is better suited for a first GitHub preview APK attempt, but APK generation, dependency restoration, Android runtime survival and full 16-KB acceptance are still UNVERIFIABLE until executed in CI.
+--- a/REMEDIATION_REPORT.md
++++ b/REMEDIATION_REPORT.md
+@@ -1,5 +1,8 @@
+ # AI Console v1.4.0 — EXEC002 GitHub Readiness Remediation Report
+ 
++> **SUPERSEDED RUNTIME STATUS (25/08/2026):** A startup-blocking Hermes `TextDecoder('latin1')` defect was later confirmed in the distributed v1.4.2 APK and remediated in source. The failed APK is NO-GO. See `RUNTIME_ROOT_CAUSE_REMEDIATION_REPORT_25082026203650.md` and `VERIFICATION_STATUS.md` for current status.
++
++
+ Generated: 24/08/2026 03:01:41 BST
+ 
+ ## Authoritative remediation input
+--- a/RUNTIME_ROOT_CAUSE_REMEDIATION_REPORT_25082026203650.md
++++ b/RUNTIME_ROOT_CAUSE_REMEDIATION_REPORT_25082026203650.md
+@@ -0,0 +1,40 @@
++# AI Console v1.4.2 — Runtime Root-Cause Remediation Report
++
++Generated: 25/08/2026 20:36:50 BST
++
++## Baseline
++
++- Input: `AI_CONSOLE_V1_4_2_EXEC002_REMEDIATED_SOURCE_24082026230300.zip`
++- Input SHA-256: `e2c8e6d6e26f822041d6549c2f53dcfc38d9ceb7f2f422c1f30bd56f52771cf7`
++- Failed distributed APK: v1.4.2 / versionCode 11 / `com.nexarenew.aiconsole`
++
++## Confirmed root cause
++
++`App.js` imports `src/documents/localPdfAdapter.js`, which imports `src/documents/pdfTextExtract.mjs`. The latter created `new TextDecoder('latin1')` at module scope. On the Android Hermes runtime this unsupported encoding throws during application-module evaluation, preventing normal startup.
++
++## Remediation
++
++1. Replaced module-scope `TextDecoder('latin1')` with a deterministic chunked byte-to-codepoint decoder.
++2. Added a regression test that rejects reintroduction of the unsupported constructor and verifies exact byte preservation.
++3. Changed CI runtime checks to default on for push/PR and release-candidate manual runs.
++4. Added a release runtime acceptance gate requiring both API-36 and 16-KB process-survival evidence.
++5. Blocked APK artefact publication when runtime gates are disabled or fail.
++6. Corrected current release/build/handover documentation that described runtime gates as optional.
++
++## Verification executed here
++
++- `npm run check`: PASS.
++- Dedicated startup-resilience suite: 6/6 PASS.
++- Full test suite with exact `jszip 3.10.1` supplied from the preinstalled local toolchain: 75/75 PASS, 0 skipped.
++- Direct startup-sensitive source scan: no `TextDecoder('latin1')` remains.
++
++## Verification not executable here
++
++- Clean `npm ci` did not complete within the execution environment; offline retry proved at least `zod-3.25.76.tgz` was absent from cache.
++- Therefore dependency-tree certification, Expo export/prebuild, Gradle build, emulator launch and physical-device verification are not claimed PASS.
++
++## Release verdict
++
++- Original failed APK: **NO-GO**.
++- Remediated source: **LOCALLY VERIFIED FOR THE EXECUTED STATIC/UNIT SCOPE**.
++- Fresh APK: **UNVERIFIABLE until rebuilt and the mandatory runtime gates execute against that exact candidate**.

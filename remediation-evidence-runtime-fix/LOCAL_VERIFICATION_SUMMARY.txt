@@ -1,0 +1,16 @@
+AI Console v1.4.2 runtime root-cause remediation local verification
+Date: 25/08/2026
+
+PASS: npm run check -> STATIC_CHECK: PASS
+PASS: dedicated startupRuntimeResilience.test.mjs -> 6/6
+PASS: full Node suite -> 75/75, 0 skipped, when exact jszip 3.10.1 and its local test dependencies were supplied from the preinstalled local toolchain
+PASS: ci-version-guard -> CI_VERSION_GUARD: PASS
+PASS: runtime-contract -> RUNTIME_CONTRACT: PASS
+PASS: workflow YAML parse
+PASS: no executable new TextDecoder('latin1') constructor remains in App.js/index.js/src
+
+NOT_EXECUTABLE_HERE: clean npm ci did not complete within the execution environment.
+Evidence: offline retry failed because zod-3.25.76.tgz was not cached.
+NOT EXECUTED: Expo export/prebuild, Gradle APK build, Android emulator launch, physical-device tests.
+
+Do not infer fresh APK/runtime PASS from these local source checks.

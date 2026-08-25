@@ -1,6 +1,7 @@
 import { createId, normaliseBState, STORAGE_SCHEMA_VERSION_B } from '../domain/conversationSchema.mjs';
 import { normaliseDocument, sanitiseDocumentForExport, sanitiseRevisionForExport } from '../documents/documentDomain.mjs';
 import { sanitizeChatForPersistence, stripPrivateProperties } from '../utils/privacy.mjs';
+import { recoverInterruptedTurns } from '../domain/offlineQueue.mjs';
 
 export const STORAGE_SCHEMA_VERSION_C = 4;
 
@@ -58,14 +59,17 @@ export const normaliseCState = (state = {}, now = Date.now()) => {
   const documentRevisions = (migrated.documentRevisions || []).filter((revision) => revision && knownDocIds.has(revision.documentId));
   const hydratedWorkspaces = safeWorkspaces.map((workspace) => ({ ...workspace, chatIds: chats.filter((chat) => chat.workspaceId === workspace.id).map((chat) => chat.id), documentIds: documents.filter((doc) => doc.workspaceId === workspace.id).map((doc) => doc.id) }));
   const activeWorkspaceId = knownWorkspaces.has(migrated.activeWorkspaceId) ? migrated.activeWorkspaceId : hydratedWorkspaces[0].id;
+  const activeWorkspaceChatIds = new Set(chats.filter((chat) => chat.workspaceId === activeWorkspaceId).map((chat) => chat.id));
+  const activeChatId = activeWorkspaceChatIds.has(migrated.activeChatId) ? migrated.activeChatId : chats.find((chat) => chat.workspaceId === activeWorkspaceId)?.id || '';
+  const offlineQueue = recoverInterruptedTurns(Array.isArray(migrated.offlineQueue) ? migrated.offlineQueue : [], now);
   const workspaceDocIds = new Set(documents.filter((doc) => doc.workspaceId === activeWorkspaceId && doc.status !== 'DELETED').map((doc) => doc.id));
   const activeDocumentId = workspaceDocIds.has(migrated.activeDocumentId) ? migrated.activeDocumentId : documents.find((doc) => doc.workspaceId === activeWorkspaceId && doc.status !== 'DELETED')?.id || null;
   const documentGenerationJobs = (Array.isArray(migrated.documentGenerationJobs) ? migrated.documentGenerationJobs : []).filter((job) => job && knownDocIds.has(job.documentId)).map((job) => ({ id: String(job.id || createId('doc-job')), documentId: String(job.documentId), sectionId: job.sectionId ? String(job.sectionId) : null, operation: ['append','insert','replace'].includes(job.operation) ? job.operation : 'append', status: ['STREAMING','COMPLETE','FAILED','CANCELLED'].includes(job.status) ? job.status : 'FAILED', createdAt: at(job.createdAt, now), updatedAt: at(job.updatedAt, now), error: job.error ? String(job.error).slice(0, 240) : null }));
-  return { ...migrated, storageSchemaVersion: STORAGE_SCHEMA_VERSION_C, chats, workspaces: hydratedWorkspaces, documents, documentRevisions, documentGenerationJobs, activeWorkspaceId, activeDocumentId, promptLibrary: Array.isArray(migrated.promptLibrary) ? migrated.promptLibrary : [], documentSession: migrated.documentSession || null, backupMetadata: migrated.backupMetadata || { lastBackupAt: null, lastRestoreAt: null } };
+  return { ...migrated, storageSchemaVersion: STORAGE_SCHEMA_VERSION_C, chats, workspaces: hydratedWorkspaces, documents, documentRevisions, documentGenerationJobs, offlineQueue, activeWorkspaceId, activeChatId, activeDocumentId, promptLibrary: Array.isArray(migrated.promptLibrary) ? migrated.promptLibrary : [], documentSession: migrated.documentSession || null, backupMetadata: migrated.backupMetadata || { lastBackupAt: null, lastRestoreAt: null } };
 };
 
 const updateWorkspace = (state, workspaceId, updater, now = Date.now()) => ({ ...state, workspaces: state.workspaces.map((workspace) => workspace.id === workspaceId ? { ...updater(workspace), updatedAt: now } : workspace) });
-export const addWorkspace = (state, values, now = Date.now()) => { const workspace = createWorkspace({ ...values, now }); return { ...state, workspaces: [...state.workspaces, workspace], activeWorkspaceId: workspace.id, activeDocumentId: null }; };
+export const addWorkspace = (state, values, now = Date.now()) => { const workspace = createWorkspace({ ...values, now }); return { ...state, workspaces: [...state.workspaces, workspace], activeWorkspaceId: workspace.id, activeChatId: '', activeDocumentId: null }; };
 export const renameWorkspace = (state, workspaceId, name, now = Date.now()) => updateWorkspace(state, workspaceId, (workspace) => ({ ...workspace, name: String(name || '').trim() || workspace.name }), now);
 export const archiveWorkspace = (state, workspaceId, archived, now = Date.now()) => updateWorkspace(state, workspaceId, (workspace) => ({ ...workspace, archived: Boolean(archived) }), now);
 export const deleteWorkspace = (state, workspaceId) => {

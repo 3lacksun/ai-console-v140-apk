@@ -1,0 +1,5 @@
+
+> ai-console@1.4.2 check
+> node scripts/static-check.mjs
+
+STATIC_CHECK: PASS

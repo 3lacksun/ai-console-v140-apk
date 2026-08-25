@@ -1,22 +1,19 @@
 import fs from 'node:fs'; import path from 'node:path'; import process from 'node:process';
 const root=process.cwd(), read=(f)=>fs.readFileSync(path.join(root,f),'utf8'), json=(f)=>JSON.parse(read(f)), assert=(c,m)=>{if(!c)throw new Error(m)};
-const pkg=json('package.json'),app=json('app.json'),source=read('App.js'),readIf=(f)=>fs.existsSync(path.join(root,f))?read(f):'';
-const lockExists=fs.existsSync(path.join(root,'package-lock.json'));
-const lock=lockExists?json('package-lock.json'):null;
+const pkg=json('package.json'),lock=json('package-lock.json'),app=json('app.json'),source=read('App.js'),readIf=(f)=>fs.existsSync(path.join(root,f))?read(f):'';
 const workflow=readIf('.github/workflows/android-apk.yml') || readIf('../.github/workflows/android-apk.yml'),readme=read('README.md'),workspace=read('src/workspaces/workspaceSchema.mjs'),backup=read('src/backup/backupService.mjs'),storage=read('src/utils/storage.js'),project=read('src/export/projectArchive.mjs'),docProject=read('src/documents/documentProjectArchive.mjs'),docStudio=read('src/components/DocumentStudio.js'),docTarget=read('src/components/DocumentTargetSheet.js'),protectedTools=read('src/components/ProtectedWorkspaceTools.js'),bubble=read('src/components/MessageBubble.js'),messageActions=read('src/components/MessageActionSheet.js'),primitives=read('src/ui/primitives.js'),responsive=read('src/ui/responsive.mjs'),settings=read('src/components/SettingsSheet.js'),protectedSettings=read('src/components/LLMSettingsSheet.js');
-assert(pkg.version==='1.4.0','v1.4.0 package identity drift');
-if(lock){assert(lock.version==='1.4.0'&&lock.packages[''].version==='1.4.0','v1.4.0 package-lock identity drift');}
-assert(app.expo.version==='1.4.0'&&app.expo.android.versionCode===9&&app.expo.android.package==='com.nexarenew.aiconsole','Expo/Android release identity drift');
+assert(pkg.version==='1.4.2'&&lock.version==='1.4.2'&&lock.packages[''].version==='1.4.2','v1.4.2 package identity drift');
+assert(app.expo.version==='1.4.2'&&app.expo.android.versionCode===11&&app.expo.android.package==='com.nexarenew.aiconsole','Expo/Android release identity drift');
 assert(app.expo.orientation==='default'&&app.expo.android.softwareKeyboardLayoutMode==='resize','adaptive orientation/IME contract missing');
 assert(app.expo.userInterfaceStyle==='light'&&app.expo.backgroundColor==='#f8fafc','light-only app appearance contract missing');
 assert(fs.existsSync(path.join(root,'.htaccess')),'.htaccess missing');
-assert(readme.includes('AI Console v1.4.0')&&readme.includes('Document Studio Pro'),'README identity stale');
+assert(readme.includes('AI Console v1.4.2')&&readme.includes('Document Studio Pro'),'README identity stale');
 assert(workspace.includes('STORAGE_SCHEMA_VERSION_C = 4')&&workspace.includes('documentRevisions')&&workspace.includes('activeDocumentId'),'schema v4 documents missing');
 assert(storage.includes('SAVED_SECURELY')&&storage.includes('SESSION_ONLY')&&storage.includes('getApiKeyResult')&&storage.includes('READ_FAILED')&&storage.includes('persistAndVerifyVersionedAppState'),'SecureStore/durable state result contract missing');
 assert(backup.includes('commitPreparedRestore')&&backup.includes('Rollback read-back verification failed'),'transactional restore verification missing');
 assert(project.includes('rawZipPreflight')&&project.includes("import('jszip')")&&project.includes('documentRevisions'),'workspace archive v2/raw preflight missing');
 assert(docProject.includes('rawZipPreflight')&&docProject.includes("import('jszip')")&&docProject.includes('mergeParsedDocumentProjectArchive'),'document project archive contract missing');
-for(const f of ['src/documents/documentDomain.mjs','src/documents/documentTemplates.mjs','src/documents/documentRender.mjs','src/documents/documentExport.js','src/components/DocumentStudio.js','src/components/MessageActionSheet.js','src/components/DocumentTargetSheet.js','src/ui/tokens.js','src/ui/primitives.js','src/ui/responsive.mjs','src/domain/generationPresentation.mjs']) assert(fs.existsSync(path.join(root,f)),`Missing v1.4.0 module: ${f}`);
+for(const f of ['src/documents/documentDomain.mjs','src/documents/documentTemplates.mjs','src/documents/documentRender.mjs','src/documents/documentExport.js','src/components/DocumentStudio.js','src/components/MessageActionSheet.js','src/components/DocumentTargetSheet.js','src/ui/tokens.js','src/ui/primitives.js','src/ui/responsive.mjs','src/domain/generationPresentation.mjs']) assert(fs.existsSync(path.join(root,f)),`Missing v1.4.2 module: ${f}`);
 for(const label of ['General Report','Technical Specification','Audit Report','Implementation Plan','Memorandum','Proposal','Formal Letter']) assert(read('src/documents/documentTemplates.mjs').includes(label),`Missing document template ${label}`);
 for(const term of ['Undo','Redo','Find in document','Create snapshot','Compare latest','Restore non-destructively','Preview PDF','DOCX: PARTIAL','AI append','AI insert','AI replace','Standard margins','Delete document','target section']) assert(docStudio.includes(term),`Document Studio contract missing: ${term}`);
 assert(docStudio.includes("['pdf','md','txt','html']")&&docStudio.includes('onExport(active,f)'), 'Document Studio export format controls missing');
@@ -36,13 +33,18 @@ assert(source.includes('commitStateTransaction')&&source.includes('prepareAtomic
 assert(settings.includes('Haptic feedback')&&settings.includes('minHeight: 48'),'haptic/touch target settings missing');
 assert(protectedSettings.includes('apiKeyPersistenceStatus')&&protectedSettings.includes('Session only'),'SecureStore failure not surfaced');
 assert(!settings.includes('OpenRouter API Key')&&!settings.includes('System prompt')&&!settings.includes('Select Model'),'protected AI configuration leaked into general settings');
-assert(workflow.includes('AI_Console_v1.4.0_preview-debug-signed')&&workflow.includes('AI_Console_v1.4.0_production-release-signed')&&workflow.includes('android/app/build/outputs/apk/release/app-release.apk'),'CI path/artifact identity drift');
+assert(workflow.includes('cache-dependency-path: package-lock.json')&&workflow.includes('AI_Console_v1.4.2_preview-debug-signed')&&workflow.includes('AI_Console_v1.4.2_production-release-signed')&&workflow.includes('android/app/build/outputs/apk/release/app-release.apk'),'CI path/artifact identity drift');
 assert(workflow.includes('actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803')&&workflow.includes('actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38')&&workflow.includes('actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961')&&workflow.includes('android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699')&&workflow.includes('actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f'),'immutable GitHub Action SHA pinning missing or drifted');
 assert(workflow.includes('android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699')&&workflow.includes('command -v sdkmanager')&&workflow.includes('ANDROID_SDK_ROOT'),'Android SDK command-line tool bootstrap is missing');
-assert(workflow.includes('default: false')&&workflow.includes('RUN_EMULATOR_CHECKS')&&workflow.includes('Runtime emulator diagnostics disabled for this run'),'runtime emulator/16-KB diagnostics must be optional and disabled by default for first preview APK CI');
+assert(workflow.includes('default: true')&&workflow.includes("github.event_name != 'workflow_dispatch' || inputs.run_emulator_checks")&&workflow.includes('Release runtime acceptance gate')&&workflow.includes("success() && env.RUN_EMULATOR_CHECKS == 'true'")&&workflow.includes('no APK artefact will be published'),'runtime emulator/16-KB release acceptance must default on and APK publication must fail closed when disabled');
+assert(source.includes("const APP_RELEASE_LABEL = 'AI Console v1.4.2'")&&source.includes('testID=\"ai-console-app-ready\"')&&!source.includes('AI Console v1.4.0'),'real-app readiness/version marker missing or stale');
+assert(workflow.includes('uiautomator dump')&&workflow.includes('node scripts/verify-app-ready-ui.mjs')&&workflow.includes('ANDROID_16_APP_READY=PASS')&&workflow.includes('ANDROID_16K_APP_READY=PASS')&&workflow.includes('FAIL_RECOVERY_SHELL'),'release runtime gate does not positively distinguish the real app from recovery shells');
+assert(read('scripts/verify-app-ready-ui.mjs').includes('RECOVERY_SHELL')&&read('scripts/verify-app-ready-ui.mjs').includes('READY_MARKER_NOT_FOUND'),'executable app-ready UI classifier missing');
+assert(pkg.scripts?.['build:apk']==='node scripts/build-apk-policy.mjs'&&pkg.scripts?.['build:apk:diagnostic']==='eas build -p android --profile diagnostic-preview','APK build scripts permit an ambiguous/unverified release path');
 assert(workflow.includes('node scripts/verify-runtime-contract.mjs'),'runtime contract verifier is not wired into CI');
 assert(!workflow.includes('generated-android-prebuild.tgz')&&workflow.includes('generated-android-config'),'CI diagnostics must exclude the generated Android build tree/APK duplication');
 
+assert(!read('src/documents/pdfTextExtract.mjs').match(/new\s+TextDecoder\(\s*['\"]latin1['\"]/i),'Hermes-unsupported latin1 TextDecoder remains on the startup import path');
 assert(!source.includes("from 'expo-speech-recognition'")&&!source.includes("require('expo-speech-recognition')")&&source.includes('loadSpeechRecognitionModule')&&source.includes('speechRecognitionAdapter.mjs'),'speech recognition must be loaded only through the validated startup-safe adapter');
 assert(source.includes("import AppErrorBoundary from './src/components/AppErrorBoundary'")&&source.includes('<AppErrorBoundary><AIConsoleApp /></AppErrorBoundary>'),'root React error boundary missing');
 assert(source.includes('Startup recovery mode: saved state could not be restored safely')&&source.includes('hydrationDegradedRef.current'),'startup hydration recovery/overwrite protection missing');
@@ -56,4 +58,14 @@ assert(primitives.includes("reduced?'none':'fade'")&&primitives.includes("reduce
 assert(primitives.includes('useModalAccessibilityFocus')&&primitives.includes('setAccessibilityFocus')&&source.includes('announceForAccessibility'),'modal focus/screen announcement accessibility contract missing');
 assert(docStudio.includes('Heading level')&&docStudio.includes('Move editor to this heading'),'document outline accessibility semantics missing');
 const forbiddenFiles=[]; const walk=(dir)=>{for(const e of fs.readdirSync(dir,{withFileTypes:true})){if(['node_modules','.git','dist-ci','android'].includes(e.name))continue;const p=path.join(dir,e.name); if(e.isDirectory())walk(p);else if(/\.(jks|keystore|p12|pfx|env)$/i.test(e.name)||e.name==='.env')forbiddenFiles.push(p)}};walk(root);assert(forbiddenFiles.length===0,`private signing/secret files packaged: ${forbiddenFiles.join(',')}`);
+
+const queue=read('src/domain/offlineQueue.mjs'),conversation=read('src/domain/conversationSchema.mjs'),rawZip=read('src/utils/rawZipPreflight.mjs'),pinThrottle=read('src/security/pinThrottle.mjs');
+assert(app.expo.android.blockedPermissions?.includes('android.permission.SYSTEM_ALERT_WINDOW'),'unnecessary SYSTEM_ALERT_WINDOW permission is not blocked');
+assert(pinThrottle.includes('maxFailures: 5')&&pinThrottle.includes('lockMs: 5 * 60 * 1000')&&source.includes('PIN_THROTTLE_STORAGE_KEY'),'persistent PIN attempt throttling contract missing');
+assert(conversation.includes('while(changed)')&&conversation.includes('removed.has(m.parentMessageId)'),'descendant message deletion cascade missing');
+assert(queue.includes("CANCELLED:['QUEUED']")&&queue.includes('recoverInterruptedTurns'),'offline queue retry/restart recovery contract missing');
+assert(workspace.includes('activeWorkspaceChatIds')&&workspace.includes("activeChatId = activeWorkspaceChatIds.has"),'workspace active-chat scoping missing');
+assert(rawZip.includes('boundedBase64ToBytes')&&project.includes('boundedBase64ToBytes')&&docProject.includes('boundedBase64ToBytes'),'pre-base64-decode archive source bound missing');
+assert(!source.includes('useEffect(() => { if (messages.length) scrollToBottom(); }'),'forced message-count autoscroll regression remains');
+
 console.log('STATIC_CHECK: PASS');

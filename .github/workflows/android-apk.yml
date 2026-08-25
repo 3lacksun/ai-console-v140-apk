@@ -4,15 +4,22 @@ on:
   workflow_dispatch:
     inputs:
       signing_mode:
-        description: preview or production
+        description: "preview uses debug signing; production requires configured GitHub Secrets"
         type: choice
         required: true
         default: preview
         options:
           - preview
           - production
+      run_emulator_checks:
+        description: "Run Android 16/API 36 cold-launch plus the dedicated 16-KB page-size/process-survival gates. Disable only for build diagnostics; APK artefacts are not published when disabled."
+        type: boolean
+        required: true
+        default: true
   push:
-    branches: [main]
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 permissions:
   contents: read
@@ -22,128 +29,516 @@ env:
   JAVA_VERSION: "17"
   ANDROID_API_LEVEL: "36"
   ANDROID_BUILD_TOOLS_VERSION: "36.0.0"
+  ANDROID_16_SYSTEM_IMAGE: "system-images;android-36;google_apis;x86_64"
+  ANDROID_16_AVD_NAME: "ai-console-api36"
+  ANDROID_16K_SYSTEM_IMAGE: "system-images;android-35;google_apis_ps16k;x86_64"
+  ANDROID_16K_AVD_NAME: "ai-console-ps16k-api35"
+  PACKAGE_NAME: "com.nexarenew.aiconsole"
   SIGNING_MODE: ${{ inputs.signing_mode || 'preview' }}
-  PREVIEW_APK_NAME: AI_Console_v1.4.0_preview-release-js-embedded.apk
-  PRODUCTION_APK_NAME: AI_Console_v1.4.0_production-release-signed.apk
-  DIAGNOSTICS_DIR: ci-diagnostics
+  RUN_EMULATOR_CHECKS: ${{ github.event_name != 'workflow_dispatch' || inputs.run_emulator_checks }}
+  PREVIEW_APK_NAME: "AI_Console_v1.4.2_preview-debug-signed.apk"
+  PRODUCTION_APK_NAME: "AI_Console_v1.4.2_production-release-signed.apk"
+  DIAGNOSTICS_DIR: "ci-diagnostics"
 
 jobs:
   build-android-apk:
-    name: Release APK with embedded JS
+    name: APK build, signing, diagnostics and Android/16-KB gates
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
-      - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - name: Repository checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - name: Node 24
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+      - name: Set up Node 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
 
-      - name: Java 17
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+      - name: Set up Java 17
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
 
-      - name: Android SDK
-        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699
+      - name: Set up Android SDK command-line tools
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4
         with:
           packages: ''
           accept-android-sdk-licenses: true
 
-      - name: Env setup
+      - name: Repository environment setup
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p "$DIAGNOSTICS_DIR"
-          node --version
-          npm --version
-          java -version
+          node --version | tee "$DIAGNOSTICS_DIR/node-version.txt"
+          npm --version | tee "$DIAGNOSTICS_DIR/npm-version.txt"
+          java -version 2>&1 | tee "$DIAGNOSTICS_DIR/java-version.txt"
+          printf 'ANDROID_HOME=%s\nANDROID_SDK_ROOT=%s\n' "${ANDROID_HOME:-}" "${ANDROID_SDK_ROOT:-}" | tee "$DIAGNOSTICS_DIR/android-env.txt"
+          command -v sdkmanager | tee "$DIAGNOSTICS_DIR/sdkmanager-path.txt"
+          command -v adb | tee "$DIAGNOSTICS_DIR/adb-path.txt"
+          test -f package.json
+          test -f package-lock.json
+          test -f App.js
+          test -f app.json
+          test -f .github/workflows/android-apk.yml
 
-      - name: npm install
-        run: npm install --no-fund --legacy-peer-deps
+      - name: npm ci
+        run: npm ci --no-fund
 
-      - name: Android SDK packages
+      - name: Production dependency security audit
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Static checks
+        run: npm run check
+
+      - name: Full tests with no release-critical skips
+        shell: bash
         run: |
+          set -euo pipefail
+          npm test 2>&1 | tee "$DIAGNOSTICS_DIR/npm-test.txt"
+          if grep -Eiq '(^# skipped [1-9]|# SKIP|\bSKIP\b)' "$DIAGNOSTICS_DIR/npm-test.txt"; then
+            echo "Release-critical test skip detected. All ZIP/package and runtime-resilience tests must execute." >&2
+            exit 1
+          fi
+
+      - name: Expo SDK and package-version drift guard
+        run: node scripts/ci-version-guard.mjs
+
+      - name: Runtime contract verification
+        run: node scripts/verify-runtime-contract.mjs
+
+      - name: Expo dependency validation - expo install --check
+        run: npx expo install --check
+
+      - name: Expo diagnostics - pinned expo-doctor
+        run: npx --yes expo-doctor@1.20.2
+
+      - name: Metro/JS bundle export verification
+        run: |
+          set -euo pipefail
+          npx expo export --platform android --output-dir dist-ci
+          find dist-ci -type f | sort | tee "$DIAGNOSTICS_DIR/export-file-list.txt"
+          if ! find dist-ci -type f \( -name '*.js' -o -name '*.hbc' \) | grep -q .; then
+            echo "No Android JavaScript bundle or Hermes bytecode was produced by expo export." >&2
+            exit 1
+          fi
+
+      - name: Install Android SDK 36 build prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS_VERSION}"
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-${ANDROID_API_LEVEL}" \
+            "build-tools;${ANDROID_BUILD_TOOLS_VERSION}"
+          if [[ "$RUN_EMULATOR_CHECKS" == "true" ]]; then
+            sdkmanager "emulator" "$ANDROID_16_SYSTEM_IMAGE" "$ANDROID_16K_SYSTEM_IMAGE"
+          else
+            echo "Runtime emulator diagnostics disabled for this diagnostic-only run; no APK artefact will be published." | tee "$DIAGNOSTICS_DIR/emulator-gates-disabled.txt"
+          fi
+          sdkmanager --list_installed | tee "$DIAGNOSTICS_DIR/android-sdk-installed.txt"
+
+      - name: Production signing preflight
+        if: ${{ env.SIGNING_MODE == 'production' }}
+        shell: bash
+        env:
+          AI_CONSOLE_KEYSTORE_BASE64: ${{ secrets.AI_CONSOLE_ANDROID_KEYSTORE_BASE64 }}
+          AI_CONSOLE_KEYSTORE_PASSWORD: ${{ secrets.AI_CONSOLE_ANDROID_KEYSTORE_PASSWORD }}
+          AI_CONSOLE_KEY_ALIAS: ${{ secrets.AI_CONSOLE_ANDROID_KEY_ALIAS }}
+          AI_CONSOLE_KEY_PASSWORD: ${{ secrets.AI_CONSOLE_ANDROID_KEY_PASSWORD }}
+          AI_CONSOLE_ANDROID_CERT_SHA256: ${{ secrets.AI_CONSOLE_ANDROID_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in AI_CONSOLE_KEYSTORE_BASE64 AI_CONSOLE_KEYSTORE_PASSWORD AI_CONSOLE_KEY_ALIAS AI_CONSOLE_KEY_PASSWORD AI_CONSOLE_ANDROID_CERT_SHA256; do
+            if [[ -z "${!name:-}" ]]; then echo "Missing required production signing secret: $name" >&2; missing=1; fi
+          done
+          if [[ "$missing" -ne 0 ]]; then echo "PRODUCTION_SIGNING_PREFLIGHT=FAIL" | tee "$DIAGNOSTICS_DIR/production-signing-preflight.txt"; exit 1; fi
+          echo "PRODUCTION_SIGNING_PREFLIGHT=PASS" | tee "$DIAGNOSTICS_DIR/production-signing-preflight.txt"
+
+      - name: Decode production keystore
+        if: ${{ env.SIGNING_MODE == 'production' }}
+        shell: bash
+        env:
+          AI_CONSOLE_KEYSTORE_BASE64: ${{ secrets.AI_CONSOLE_ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          KEYSTORE_PATH="$RUNNER_TEMP/ai-console-release.keystore"
+          printf '%s' "$AI_CONSOLE_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          test -s "$KEYSTORE_PATH" || { echo "Decoded production keystore is empty" >&2; exit 1; }
+          echo "AI_CONSOLE_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
 
       - name: Expo prebuild
         env:
           EXPO_NO_GIT_STATUS: "1"
         run: npx expo prebuild --platform android --clean --no-install
 
-      - name: Use debug keystore for release (preview only)
-        if: ${{ env.SIGNING_MODE != 'production' }}
+      - name: Verify generated Gradle Android SDK 36 resolution
+        shell: bash
         run: |
           set -euo pipefail
-          # Ensure a trailing newline, then append clean key=value lines (no leading whitespace).
-          # Debug builds do NOT embed JS; release builds do.
-          printf '\n' >> android/gradle.properties
-          printf 'MYAPP_UPLOAD_STORE_FILE=debug.keystore\n' >> android/gradle.properties
-          printf 'MYAPP_UPLOAD_KEY_ALIAS=androiddebugkey\n' >> android/gradle.properties
-          printf 'MYAPP_UPLOAD_STORE_PASSWORD=android\n' >> android/gradle.properties
-          printf 'MYAPP_UPLOAD_KEY_PASSWORD=android\n' >> android/gradle.properties
-          # Force release signingConfig to use the debug keystore for preview builds.
-          if [ -f android/app/build.gradle ]; then
-            sed -i 's/signingConfig signingConfigs.release/signingConfig signingConfigs.debug/g' android/app/build.gradle || true
-          fi
-          if [ -f android/app/build.gradle.kts ]; then
-            sed -i 's/signingConfig = signingConfigs.getByName("release")/signingConfig = signingConfigs.getByName("debug")/g' android/app/build.gradle.kts || true
-          fi
-          echo "Preview release will use debug signing"
+          grep -RInE 'compileSdk(?:Version)?[ =]+36|compileSdk[[:space:]]+36' android | tee "$DIAGNOSTICS_DIR/gradle-compile-sdk-36.txt"
+          grep -RInE 'targetSdk(?:Version)?[ =]+36|targetSdk[[:space:]]+36' android | tee "$DIAGNOSTICS_DIR/gradle-target-sdk-36.txt"
 
-      - name: Gradle assembleRelease
+      - name: Configure production release signing
+        if: ${{ env.SIGNING_MODE == 'production' }}
+        env:
+          AI_CONSOLE_KEYSTORE_PASSWORD: ${{ secrets.AI_CONSOLE_ANDROID_KEYSTORE_PASSWORD }}
+          AI_CONSOLE_KEY_ALIAS: ${{ secrets.AI_CONSOLE_ANDROID_KEY_ALIAS }}
+          AI_CONSOLE_KEY_PASSWORD: ${{ secrets.AI_CONSOLE_ANDROID_KEY_PASSWORD }}
+        run: node scripts/configure-android-release-signing.mjs
+
+      - name: Label preview/debug signing mode
+        if: ${{ env.SIGNING_MODE != 'production' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "PREVIEW_SIGNING_MODE=debug-signed" | tee "$DIAGNOSTICS_DIR/preview-signing-mode.txt"
+          echo "This artefact is a preview/debug-signed APK. It is not production-signed and must not be described as production-ready." | tee -a "$DIAGNOSTICS_DIR/preview-signing-mode.txt"
+
+      - name: Gradle APK build
+        shell: bash
         run: |
           set -euo pipefail
           chmod +x android/gradlew
-          cd android && ./gradlew app:assembleRelease --no-daemon --max-workers=2
-
-      - name: Label APK
-        run: |
-          set -euo pipefail
-          APK="android/app/build/outputs/apk/release/app-release.apk"
-          if [ ! -f "$APK" ]; then
-            APK=$(find android/app/build/outputs/apk -name '*.apk' | head -1)
-          fi
-          test -f "$APK"
-          if [ "$SIGNING_MODE" = "production" ]; then
-            OUT="$PRODUCTION_APK_NAME"
+          if [[ "$SIGNING_MODE" == "production" ]]; then
+            (cd android && ./gradlew app:assembleRelease --no-daemon --max-workers=2)
+            (cd android && ./gradlew app:dependencies --configuration releaseRuntimeClasspath --no-daemon > "../$DIAGNOSTICS_DIR/gradle-runtime-dependencies.txt" || true)
           else
-            OUT="$PREVIEW_APK_NAME"
+            (cd android && ./gradlew app:assembleDebug --no-daemon --max-workers=2)
+            (cd android && ./gradlew app:dependencies --configuration debugRuntimeClasspath --no-daemon > "../$DIAGNOSTICS_DIR/gradle-runtime-dependencies.txt" || true)
           fi
-          cp "$APK" "$OUT"
-          echo "APK_PATH=$OUT" >> "$GITHUB_ENV"
-          ls -lh "$OUT"
 
-      - name: Verify JS embedded
+      - name: APK existence and artefact labelling
+        shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$DIAGNOSTICS_DIR/apk-js"
-          unzip -q "$APK_PATH" -d "$DIAGNOSTICS_DIR/apk-js"
-          find "$DIAGNOSTICS_DIR/apk-js" -type f | sort | tee "$DIAGNOSTICS_DIR/apk-files.txt"
-          if ! find "$DIAGNOSTICS_DIR/apk-js" -type f \( -name '*.bundle' -o -name '*.hbc' -o -name 'index.android.bundle' \) | grep -q .; then
-            echo "No embedded JS/Hermes bundle — would hang on splash" >&2
+          if [[ "$SIGNING_MODE" == "production" ]]; then
+            APK="android/app/build/outputs/apk/release/app-release.apk"
+            LABELLED_APK="$PRODUCTION_APK_NAME"
+          else
+            APK="android/app/build/outputs/apk/debug/app-debug.apk"
+            LABELLED_APK="$PREVIEW_APK_NAME"
+          fi
+          test -f "$APK" || { echo "Expected APK not found at $APK" >&2; exit 1; }
+          cp "$APK" "$LABELLED_APK"
+          echo "APK_PATH=$LABELLED_APK" >> "$GITHUB_ENV"
+          echo "APK_SOURCE_PATH=$APK" >> "$GITHUB_ENV"
+          ls -lh "$LABELLED_APK" | tee "$DIAGNOSTICS_DIR/apk-file.txt"
+
+      - name: APK package/version inspection
+        shell: bash
+        run: |
+          set -euo pipefail
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)"
+          test -x "$AAPT" || { echo "aapt not found" >&2; exit 1; }
+          "$AAPT" dump badging "$APK_PATH" | tee "$DIAGNOSTICS_DIR/installed-apk-manifest-dump.txt"
+          grep -F "package: name='com.nexarenew.aiconsole'" "$DIAGNOSTICS_DIR/installed-apk-manifest-dump.txt"
+          grep -F "versionName='1.4.2'" "$DIAGNOSTICS_DIR/installed-apk-manifest-dump.txt"
+
+      - name: APK embedded JS bundle verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$DIAGNOSTICS_DIR/apk-js-inspect"
+          mkdir -p "$DIAGNOSTICS_DIR/apk-js-inspect"
+          unzip -q "$APK_PATH" -d "$DIAGNOSTICS_DIR/apk-js-inspect"
+          find "$DIAGNOSTICS_DIR/apk-js-inspect/assets" -type f | sort | tee "$DIAGNOSTICS_DIR/apk-assets-file-list.txt" || true
+          if ! find "$DIAGNOSTICS_DIR/apk-js-inspect" -type f \( -name '*.js' -o -name '*.hbc' -o -name 'index.android.bundle' \) | grep -q .; then
+            echo "APK embedded JS/Hermes bundle not found." >&2
             exit 1
           fi
-          echo "EMBEDDED_JS=PASS"
 
-      - name: Upload APK
+      - name: APK_ZIPALIGN_16K gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -type f -name zipalign | sort -V | tail -1)"
+          test -x "$ZIPALIGN" || { echo "zipalign not found" >&2; exit 1; }
+          "$ZIPALIGN" -c -P 16 -v 4 "$APK_PATH" | tee "$DIAGNOSTICS_DIR/apk-zipalign-16k.txt"
+          echo "APK_ZIPALIGN_16K=PASS" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+
+      - name: APK_NATIVE_ELF_16K gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$DIAGNOSTICS_DIR/native-elf"
+          mkdir -p "$DIAGNOSTICS_DIR/native-elf"
+          unzip -q "$APK_PATH" 'lib/*/*.so' -d "$DIAGNOSTICS_DIR/native-elf" || true
+          mapfile -t so_files < <(find "$DIAGNOSTICS_DIR/native-elf/lib" -type f -name '*.so' 2>/dev/null | sort || true)
+          if [[ "${#so_files[@]}" -eq 0 ]]; then
+            echo "No packaged native ELF libraries found; APK_NATIVE_ELF_16K=PASS_NOT_APPLICABLE" | tee "$DIAGNOSTICS_DIR/native-elf-16k.txt"
+            echo "APK_NATIVE_ELF_16K=PASS" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+            exit 0
+          fi
+          failures=0
+          for so in "${so_files[@]}"; do
+            rel="${so#"$DIAGNOSTICS_DIR/native-elf/"}"
+            readelf -lW "$so" > "$DIAGNOSTICS_DIR/native-elf/${rel//\//__}.readelf.txt"
+            case "$rel" in
+              lib/arm64-v8a/*|lib/x86_64/*)
+                while read -r align; do
+                  [[ -n "$align" ]] || continue
+                  align_dec=$((align))
+                  printf '%s LOAD_ALIGN=%s (%s)\n' "$rel" "$align" "$align_dec" | tee -a "$DIAGNOSTICS_DIR/native-elf-16k.txt"
+                  if (( align_dec < 16384 )); then
+                    echo "FAIL: $rel has LOAD alignment below 16 KB" | tee -a "$DIAGNOSTICS_DIR/native-elf-16k.txt" >&2
+                    failures=1
+                  fi
+                done < <(readelf -lW "$so" | awk '$1=="LOAD"{print $NF}')
+                ;;
+              *)
+                printf '%s SKIPPED_NON_64_BIT_ABI\n' "$rel" | tee -a "$DIAGNOSTICS_DIR/native-elf-16k.txt"
+                ;;
+            esac
+          done
+          if [[ "$failures" -ne 0 ]]; then echo "APK_NATIVE_ELF_16K=FAIL" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"; exit 1; fi
+          echo "APK_NATIVE_ELF_16K=PASS" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+
+      - name: Verify signing certificate label
+        shell: bash
+        env:
+          AI_CONSOLE_ANDROID_CERT_SHA256: ${{ secrets.AI_CONSOLE_ANDROID_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)"
+          test -x "$APKSIGNER" || { echo "apksigner not found" >&2; exit 1; }
+          "$APKSIGNER" verify --verbose --print-certs "$APK_PATH" | tee "$DIAGNOSTICS_DIR/apk-signing.txt"
+          if [[ "${{ env.SIGNING_MODE }}" == "production" ]]; then
+            if grep -qi "Android Debug" "$DIAGNOSTICS_DIR/apk-signing.txt"; then echo "Production release is signed with a debug certificate" >&2; exit 1; fi
+            expected="$(printf '%s' "$AI_CONSOLE_ANDROID_CERT_SHA256" | tr '[:upper:]' '[:lower:]' | tr -d ':[:space:]')"
+            actual="$(sed -n 's/^.*certificate SHA-256 digest: //p' "$DIAGNOSTICS_DIR/apk-signing.txt" | head -1 | tr '[:upper:]' '[:lower:]' | tr -d ':[:space:]')"
+            test -n "$expected" || { echo "Missing AI_CONSOLE_ANDROID_CERT_SHA256" >&2; exit 1; }
+            test -n "$actual" || { echo "Unable to read signer certificate SHA-256" >&2; exit 1; }
+            test "$actual" = "$expected" || { echo "Signing certificate SHA-256 does not match the authorised production certificate" >&2; exit 1; }
+            echo "SIGNING_MODE=production-release-signed" | tee "$DIAGNOSTICS_DIR/signing-mode.txt"
+          else
+            if ! grep -qi "Android Debug" "$DIAGNOSTICS_DIR/apk-signing.txt"; then echo "Preview build was expected to be debug-signed but did not expose Android Debug signer evidence" >&2; exit 1; fi
+            echo "SIGNING_MODE=preview-debug-signed" | tee "$DIAGNOSTICS_DIR/signing-mode.txt"
+          fi
+
+      - name: Create Android 16 / API 36 emulator
+        if: ${{ env.RUN_EMULATOR_CHECKS == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo no | avdmanager create avd --force --name "$ANDROID_16_AVD_NAME" --package "$ANDROID_16_SYSTEM_IMAGE"
+
+      - name: Android 16 / API 36 cold-launch process-survival gate
+        if: ${{ env.RUN_EMULATOR_CHECKS == 'true' }}
+        timeout-minutes: 20
+        shell: bash
+        run: |
+          set -euo pipefail
+          nohup "$ANDROID_HOME/emulator/emulator" -avd "$ANDROID_16_AVD_NAME" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > "$DIAGNOSTICS_DIR/android16-emulator-boot.log" 2>&1 &
+          adb wait-for-device
+          timeout 420 bash -c 'until [[ "$(adb shell getprop sys.boot_completed | tr -d "\r")" == "1" ]]; do sleep 5; done'
+          adb shell getprop ro.build.version.sdk | tr -d '\r' | tee "$DIAGNOSTICS_DIR/android16-api-level.txt"
+          grep -Fx '36' "$DIAGNOSTICS_DIR/android16-api-level.txt"
+          adb install -r "$APK_PATH" | tee "$DIAGNOSTICS_DIR/android16-adb-install.txt"
+          adb logcat -c
+          adb shell input keyevent KEYCODE_WAKEUP || true
+          adb shell wm dismiss-keyguard || true
+          START_OUTPUT="$(adb shell am start -W -S -n "$PACKAGE_NAME/.MainActivity" 2>&1 | tr -d '\r')"
+          printf '%s\n' "$START_OUTPUT" | tee "$DIAGNOSTICS_DIR/android16-mainactivity-start.txt"
+          printf '%s\n' "$START_OUTPUT" | grep -F "Status: ok"
+          sleep 30
+          adb logcat -d > "$DIAGNOSTICS_DIR/android16-logcat-full.txt"
+          PID="$(adb shell pidof "$PACKAGE_NAME" | tr -d '\r[:space:]')"
+          if [[ -z "$PID" ]]; then echo "ANDROID_16_PROCESS_SURVIVAL=FAIL" | tee "$DIAGNOSTICS_DIR/android16-process-survival.txt"; exit 1; fi
+          if grep -Eqi 'FATAL EXCEPTION|UnsatisfiedLinkError|NoClassDefFoundError|ActivityNotFoundException|ReactNativeJS.*(TypeError|ReferenceError|RangeError|SyntaxError|Invariant Violation|Fatal)|SoLoader|SIGSEGV|ANR|permission denial|Process: com\.nexarenew\.aiconsole.*has died' "$DIAGNOSTICS_DIR/android16-logcat-full.txt"; then
+            echo "ANDROID_16_PROCESS_SURVIVAL=FAIL" | tee "$DIAGNOSTICS_DIR/android16-process-survival.txt"
+            exit 1
+          fi
+          echo "ANDROID_16_PROCESS_SURVIVAL=PASS" | tee "$DIAGNOSTICS_DIR/android16-process-survival.txt"
+          READY_DUMP="$DIAGNOSTICS_DIR/android16-window.xml"
+          ready=0
+          for attempt in $(seq 1 12); do
+            adb shell uiautomator dump /sdcard/ai-console-window.xml >/dev/null 2>&1 || true
+            adb pull /sdcard/ai-console-window.xml "$READY_DUMP" >/dev/null 2>&1 || true
+            set +e
+            node scripts/verify-app-ready-ui.mjs "$READY_DUMP" > "$DIAGNOSTICS_DIR/android16-app-ready-probe.txt" 2>&1
+            ready_status=$?
+            set -e
+            if [[ "$ready_status" -eq 0 ]]; then ready=1; break; fi
+            if [[ "$ready_status" -eq 2 ]]; then
+              cat "$DIAGNOSTICS_DIR/android16-app-ready-probe.txt"
+              echo "ANDROID_16_APP_READY=FAIL_RECOVERY_SHELL" | tee "$DIAGNOSTICS_DIR/android16-app-ready.txt"
+              exit 1
+            fi
+            if [[ "$ready_status" -ne 3 ]]; then
+              cat "$DIAGNOSTICS_DIR/android16-app-ready-probe.txt" || true
+              echo "ANDROID_16_APP_READY=FAIL_PROBE_ERROR" | tee "$DIAGNOSTICS_DIR/android16-app-ready.txt"
+              exit 1
+            fi
+            sleep 5
+          done
+          if [[ "$ready" -ne 1 ]]; then
+            echo "ANDROID_16_APP_READY=FAIL_MARKER_NOT_FOUND" | tee "$DIAGNOSTICS_DIR/android16-app-ready.txt"
+            exit 1
+          fi
+          echo "ANDROID_16_APP_READY=PASS" | tee "$DIAGNOSTICS_DIR/android16-app-ready.txt"
+          adb emu kill || true
+          sleep 5
+
+      - name: Create dedicated 16-KB Android emulator
+        if: ${{ env.RUN_EMULATOR_CHECKS == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo no | avdmanager create avd --force --name "$ANDROID_16K_AVD_NAME" --package "$ANDROID_16K_SYSTEM_IMAGE"
+
+      - name: Dedicated 16-KB runtime page-size and launch-survival gates
+        if: ${{ env.RUN_EMULATOR_CHECKS == 'true' }}
+        timeout-minutes: 20
+        shell: bash
+        run: |
+          set -euo pipefail
+          nohup "$ANDROID_HOME/emulator/emulator" -avd "$ANDROID_16K_AVD_NAME" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > "$DIAGNOSTICS_DIR/ps16k-emulator-boot.log" 2>&1 &
+          adb wait-for-device
+          timeout 420 bash -c 'until [[ "$(adb shell getprop sys.boot_completed | tr -d "\r")" == "1" ]]; do sleep 5; done'
+          {
+            echo "PAGE_SIZE=$(adb shell getconf PAGE_SIZE | tr -d '\r')"
+            echo "ro.product.cpu.pagesize.max=$(adb shell getprop ro.product.cpu.pagesize.max | tr -d '\r')"
+            echo "ro.product.build.16k_page.enabled=$(adb shell getprop ro.product.build.16k_page.enabled | tr -d '\r')"
+          } | tee "$DIAGNOSTICS_DIR/emulator-page-size-evidence.txt"
+          PAGE_SIZE="$(sed -n 's/^PAGE_SIZE=//p' "$DIAGNOSTICS_DIR/emulator-page-size-evidence.txt" | tr -d '[:space:]')"
+          if [[ "$PAGE_SIZE" != "16384" ]]; then
+            echo "EMULATOR_PAGE_SIZE_16K=FAIL" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+            exit 1
+          fi
+          echo "EMULATOR_PAGE_SIZE_16K=PASS" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+          adb install -r "$APK_PATH" | tee "$DIAGNOSTICS_DIR/ps16k-adb-install.txt"
+          adb logcat -c
+          adb shell input keyevent KEYCODE_WAKEUP || true
+          adb shell wm dismiss-keyguard || true
+          START_OUTPUT="$(adb shell am start -W -S -n "$PACKAGE_NAME/.MainActivity" 2>&1 | tr -d '\r')"
+          printf '%s\n' "$START_OUTPUT" | tee "$DIAGNOSTICS_DIR/ps16k-mainactivity-start.txt"
+          printf '%s\n' "$START_OUTPUT" | grep -F "Status: ok"
+          sleep 30
+          adb logcat -d > "$DIAGNOSTICS_DIR/ps16k-logcat-full.txt"
+          PID="$(adb shell pidof "$PACKAGE_NAME" | tr -d '\r[:space:]')"
+          if [[ -z "$PID" ]]; then echo "ANDROID_16K_PROCESS_SURVIVAL=FAIL" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"; exit 1; fi
+          if grep -Eqi 'FATAL EXCEPTION|UnsatisfiedLinkError|NoClassDefFoundError|ActivityNotFoundException|ReactNativeJS.*(TypeError|ReferenceError|RangeError|SyntaxError|Invariant Violation|Fatal)|SoLoader|SIGSEGV|ANR|permission denial|Process: com\.nexarenew\.aiconsole.*has died' "$DIAGNOSTICS_DIR/ps16k-logcat-full.txt"; then
+            echo "ANDROID_16K_PROCESS_SURVIVAL=FAIL" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+            exit 1
+          fi
+          echo "ANDROID_16K_PROCESS_SURVIVAL=PASS" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+          READY_DUMP="$DIAGNOSTICS_DIR/ps16k-window.xml"
+          ready=0
+          for attempt in $(seq 1 12); do
+            adb shell uiautomator dump /sdcard/ai-console-window.xml >/dev/null 2>&1 || true
+            adb pull /sdcard/ai-console-window.xml "$READY_DUMP" >/dev/null 2>&1 || true
+            set +e
+            node scripts/verify-app-ready-ui.mjs "$READY_DUMP" > "$DIAGNOSTICS_DIR/ps16k-app-ready-probe.txt" 2>&1
+            ready_status=$?
+            set -e
+            if [[ "$ready_status" -eq 0 ]]; then ready=1; break; fi
+            if [[ "$ready_status" -eq 2 ]]; then
+              cat "$DIAGNOSTICS_DIR/ps16k-app-ready-probe.txt"
+              echo "ANDROID_16K_APP_READY=FAIL_RECOVERY_SHELL" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+              exit 1
+            fi
+            if [[ "$ready_status" -ne 3 ]]; then
+              cat "$DIAGNOSTICS_DIR/ps16k-app-ready-probe.txt" || true
+              echo "ANDROID_16K_APP_READY=FAIL_PROBE_ERROR" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+              exit 1
+            fi
+            sleep 5
+          done
+          if [[ "$ready" -ne 1 ]]; then
+            echo "ANDROID_16K_APP_READY=FAIL_MARKER_NOT_FOUND" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+            exit 1
+          fi
+          echo "ANDROID_16K_APP_READY=PASS" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+
+      - name: Release runtime acceptance gate
+        if: ${{ env.RUN_EMULATOR_CHECKS == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fx 'ANDROID_16_PROCESS_SURVIVAL=PASS' "$DIAGNOSTICS_DIR/android16-process-survival.txt"
+          grep -Fx 'ANDROID_16_APP_READY=PASS' "$DIAGNOSTICS_DIR/android16-app-ready.txt"
+          grep -Fx 'EMULATOR_PAGE_SIZE_16K=PASS' "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+          grep -Fx 'ANDROID_16K_PROCESS_SURVIVAL=PASS' "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+          grep -Fx 'ANDROID_16K_APP_READY=PASS' "$DIAGNOSTICS_DIR/android-16k-gates.txt"
+          echo 'RELEASE_RUNTIME_ACCEPTANCE=PASS' | tee "$DIAGNOSTICS_DIR/release-runtime-acceptance.txt"
+
+      - name: Record diagnostic-only build when runtime gates are disabled
+        if: ${{ env.RUN_EMULATOR_CHECKS != 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'RELEASE_RUNTIME_ACCEPTANCE=NOT_EXECUTED' | tee "$DIAGNOSTICS_DIR/release-runtime-acceptance.txt"
+          echo 'APK publication is intentionally blocked because Android runtime acceptance did not execute.' | tee -a "$DIAGNOSTICS_DIR/release-runtime-acceptance.txt"
+
+      - name: Crash diagnostics capture
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        shell: bash
+        run: |
+          set +e
+          mkdir -p "$DIAGNOSTICS_DIR"
+          adb logcat -d > "$DIAGNOSTICS_DIR/logcat-full.txt" 2>/dev/null
+          grep -Eai 'FATAL EXCEPTION|UnsatisfiedLinkError|NoClassDefFoundError|ActivityNotFoundException|ReactNativeJS|SoLoader|SIGSEGV|ANR|permission denial|has died' "$DIAGNOSTICS_DIR/logcat-full.txt" > "$DIAGNOSTICS_DIR/logcat-fatal-filtered.txt" 2>/dev/null
+          adb shell dumpsys activity > "$DIAGNOSTICS_DIR/dumpsys-activity.txt" 2>/dev/null
+          adb shell dumpsys package "$PACKAGE_NAME" > "$DIAGNOSTICS_DIR/dumpsys-package.txt" 2>/dev/null
+          adb shell dumpsys dropbox --print > "$DIAGNOSTICS_DIR/dropbox-crash-entries.txt" 2>/dev/null
+          adb shell ls -la /data/tombstones > "$DIAGNOSTICS_DIR/tombstones-list.txt" 2>/dev/null
+          {
+            echo "FATAL_EXCEPTION=$(grep -Eai 'FATAL EXCEPTION' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+            echo "UNSATISFIED_LINK_ERROR=$(grep -Eai 'UnsatisfiedLinkError' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+            echo "NO_CLASS_DEF_FOUND=$(grep -Eai 'NoClassDefFoundError' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+            echo "ACTIVITY_NOT_FOUND=$(grep -Eai 'ActivityNotFoundException' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+            echo "REACT_NATIVE_JS_FATAL=$(grep -Eai 'ReactNativeJS.*(Fatal|TypeError|ReferenceError|RangeError|SyntaxError|Invariant Violation)' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+            echo "SOLOADER_FAILURE=$(grep -Eai 'SoLoader' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+            echo "SIGSEGV_OR_TOMBSTONE=$(grep -Eai 'SIGSEGV|tombstone' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+            echo "ANR=$(grep -Eai 'ANR' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+            echo "PERMISSION_DENIAL=$(grep -Eai 'permission denial' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+            echo "PROCESS_DEATH_WITHOUT_FATAL_LOG=$(grep -Eai 'has died|process.*died' "$DIAGNOSTICS_DIR/logcat-full.txt" >/dev/null 2>&1 && echo YES || echo NO)"
+          } > "$DIAGNOSTICS_DIR/crash-classification.txt"
+          mkdir -p "$DIAGNOSTICS_DIR/generated-android-config"
+          for file in \
+            android/settings.gradle \
+            android/build.gradle \
+            android/gradle.properties \
+            android/app/build.gradle \
+            android/app/src/main/AndroidManifest.xml \
+            android/gradle/wrapper/gradle-wrapper.properties \
+            app.json package.json package-lock.json .github/workflows/android-apk.yml; do
+            if [[ -f "$file" ]]; then
+              dest="$DIAGNOSTICS_DIR/generated-android-config/$file"
+              mkdir -p "$(dirname "$dest")"
+              cp "$file" "$dest"
+            fi
+          done
+
+      - name: APK SHA-256 generation
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${APK_PATH:-}" && -f "$APK_PATH" ]]; then sha256sum "$APK_PATH" | tee "$DIAGNOSTICS_DIR/apk-sha256.txt"; fi
+
+      - name: Upload APK artefact
+        if: ${{ success() && env.RUN_EMULATOR_CHECKS == 'true' }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: ${{ env.SIGNING_MODE == 'production' && 'AI_Console_v1.4.0_production-release-signed' || 'AI_Console_v1.4.0_preview-release-js-embedded' }}
+          name: ${{ env.SIGNING_MODE == 'production' && 'AI_Console_v1.4.2_production-release-signed' || 'AI_Console_v1.4.2_preview-debug-signed' }}
           path: |
             ${{ env.PREVIEW_APK_NAME }}
             ${{ env.PRODUCTION_APK_NAME }}
           if-no-files-found: warn
           retention-days: 30
 
-      - name: Upload diagnostics
+      - name: Upload Android diagnostics artefacts
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: AI_Console_v1.4.0_android-ci-diagnostics
+          name: AI_Console_v1.4.2_android-ci-diagnostics
           path: ci-diagnostics/**
           if-no-files-found: warn
           retention-days: 30

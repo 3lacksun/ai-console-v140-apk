@@ -9,8 +9,8 @@ const lock = readJson('package-lock.json');
 const app = readJson('app.json').expo;
 const deps = pkg.dependencies || {};
 
-const EXPECTED_VERSION = '1.4.0';
-const EXPECTED_ANDROID_VERSION_CODE = 9;
+const EXPECTED_VERSION = '1.4.2';
+const EXPECTED_ANDROID_VERSION_CODE = 11;
 const EXPECTED_ANDROID_PACKAGE = 'com.nexarenew.aiconsole';
 const EXPECTED_EXPO_MAJOR = '57';
 const EXPECTED_REACT = '19.2.3';

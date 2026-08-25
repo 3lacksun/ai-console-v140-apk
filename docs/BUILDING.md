@@ -1,4 +1,4 @@
-# Building AI Console v1.4.0
+# Building AI Console v1.4.2
 
 ## Build model
 
@@ -12,8 +12,8 @@ AI Console is an Expo SDK 57 / React Native 0.86 project using **Continuous Nati
 - Android Build Tools: 36.0.0 in GitHub Actions
 - npm lockfile: `package-lock.json`
 - Application ID: `com.nexarenew.aiconsole`
-- Expo app version: `1.4.0`
-- Android versionCode: `9`
+- Expo app version: `1.4.2`
+- Android versionCode: `11`
 
 ## Clean local verification
 
@@ -42,6 +42,12 @@ EXPO_NO_GIT_STATUS=1 npx expo prebuild --platform android --clean --no-install
 
 Run this only after `npm ci` has restored the exact lockfile dependency tree.
 
+## APK release-path policy
+
+`npm run build:apk` is deliberately fail-closed. Publishable preview or production APKs must be built by `.github/workflows/android-apk.yml` with the Android runtime gates enabled. This prevents an EAS/local build from being mistaken for a release-accepted APK.
+
+For build diagnostics only, `npm run build:apk:diagnostic` uses the EAS `diagnostic-preview` profile. Any APK produced by that command is **diagnostic only** and must not be published, promoted, or described as runtime-accepted.
+
 ## Preview APK
 
 The preview path deliberately uses Gradle's debug variant so its signing state is deterministic and does not depend on production secrets:
@@ -57,7 +63,7 @@ Expected output:
 android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-GitHub CI publishes it as `AI_Console_v1.4.0_preview-debug-signed.apk` after verifying that the APK exposes Android Debug signer evidence.
+GitHub CI publishes it as `AI_Console_v1.4.2_preview-debug-signed.apk` after verifying that the APK exposes Android Debug signer evidence.
 
 ## Production APK
 
@@ -84,6 +90,8 @@ The workflow intentionally treats these as two separate runtime gates:
 2. **Dedicated 16-KB runtime** — `system-images;android-35;google_apis_ps16k;x86_64`, requiring `adb shell getconf PAGE_SIZE` to return `16384`, successful install/start and process survival.
 
 Before either runtime gate, CI also checks APK ZIP alignment with `zipalign -c -P 16 -v 4` and checks 64-bit native ELF LOAD alignment.
+
+For release candidates these runtime gates are fail-closed: `run_emulator_checks=true` is the default for push/PR and manual release-candidate runs, and the APK artefact upload step is blocked unless the gates actually execute and pass. A manual false value is diagnostic-only.
 
 ## GitHub build
 

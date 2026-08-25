@@ -1,5 +1,8 @@
 # AI Console v1.4.0 — EXEC002 GitHub Readiness Remediation Report
 
+> **SUPERSEDED RUNTIME STATUS (25/08/2026):** A startup-blocking Hermes `TextDecoder('latin1')` defect was later confirmed in the distributed v1.4.2 APK and remediated in source. The failed APK is NO-GO. See `RUNTIME_ROOT_CAUSE_REMEDIATION_REPORT_25082026203650.md` and `VERIFICATION_STATUS.md` for current status.
+
+
 Generated: 24/08/2026 03:01:41 BST
 
 ## Authoritative remediation input

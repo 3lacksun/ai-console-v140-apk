@@ -1,36 +1,32 @@
-# AI Console v1.4.0 — GitHub-Ready Verification Status
+# AI Console v1.4.2 — Release-Gate Remediation Verification
 
-Generated: 24/08/2026 03:01:41 BST
+Generated: 25/08/2026 21:25:35 BST
 
-| Gate | Status | Current evidence |
+| Gate | Status | Evidence |
 |---|---:|---|
-| Current Master Rules bootstrap | PASS | v1.2.14 / revision 20260823-02 used for this repository-preparation run. |
-| Audited baseline SHA-256 | PASS | `64ac622862b3f22a9826582b955a35824341ef5f8e53e825e803f138f67fe72b` matched. |
-| Audited hotfix SHA-256 | PASS | `85f33226150bd4a6c25c11e4648ba26d75f4119ac02d955be923d449689c4c0d` matched. |
-| Input ZIP integrity/traversal checks | PASS | Both received inputs tested before composition. |
-| GitHub repository-root structure | PASS | App, lockfile, workflow, scripts, tests, assets, specifications and repository support files present. |
-| GitHub Action immutability | PASS | checkout/setup-node/setup-java/setup-android/upload-artifact use verified full commit SHAs. |
-| Workflow permissions | PASS | `contents: read`. |
-| Fixed hosted runner | PASS | `ubuntu-24.04`. |
-| Workflow YAML parse | PASS | Current workflow parsed after final CI restructuring. |
-| Static repository checks | PASS | `STATIC_CHECK: PASS`. |
-| SDK/package version guard | PASS | `CI_VERSION_GUARD: PASS`; speech native compatibility remains a runtime gate. |
-| Runtime contract verifier | PASS | `RUNTIME_CONTRACT: PASS`. |
-| Locally executable test set | PASS | 54/54 PASS, 0 skipped, excluding only the package test file whose required `jszip` installation is absent locally. |
-| Full zero-skip test suite | UNVERIFIABLE locally | The release-critical JSZip test intentionally fails to load when dependencies are not restored. GitHub runs it after `npm ci`. |
-| Clean `npm ci` | UNVERIFIABLE locally | Registry resolution is unavailable/incomplete in this execution environment. |
-| Production dependency audit | UNVERIFIABLE locally | Configured as a blocking GitHub Actions gate after `npm ci`. |
-| Expo install check / pinned Expo Doctor | UNVERIFIABLE locally | Configured as blocking GitHub Actions gates. |
-| Expo export / clean CNG prebuild | UNVERIFIABLE locally | Configured as blocking GitHub Actions gates. |
-| Preview APK build | UNVERIFIABLE | Workflow now builds `assembleDebug`; no fresh GitHub run has occurred. |
-| Production APK build/signing | UNVERIFIABLE | Workflow builds `assembleRelease` only with authorised GitHub Secrets and verifies signer SHA-256. |
-| APK ZIP/ELF 16-KB alignment | UNVERIFIABLE | Blocking post-build gates configured; no APK built in this run. |
-| Android 16 / API-36 cold launch | UNVERIFIABLE | Optional CI emulator gate uses `system-images;android-36;google_apis;x86_64`. |
-| Dedicated 16-KB runtime | UNVERIFIABLE | Optional CI gate uses `system-images;android-35;google_apis_ps16k;x86_64` and requires `PAGE_SIZE=16384`. |
-| Physical TalkBack/large-font/keyboard/rotation | UNVERIFIABLE | Requires real-device acceptance. |
+| Master Rules bootstrap | PASS | v1.2.15 / revision 20260825-01 already loaded in the current continuous task/session. |
+| Input source ZIP integrity | PASS | Baseline SHA-256 `e2c8e6d6e26f822041d6549c2f53dcfc38d9ceb7f2f422c1f30bd56f52771cf7`. |
+| Root-cause diagnosis | PASS | Startup import chain reached `new TextDecoder('latin1')`; matching broken code was present in the source used for the failed APK. |
+| Hermes latin1 remediation | PASS | Unsupported constructor removed; explicit byte-preserving chunk decoder implemented. |
+| Regression guard | PASS | New startup test rejects `TextDecoder('latin1')` and verifies exact byte mapping. |
+| Static repository checks | PASS | `npm run check` => `STATIC_CHECK: PASS`. |
+| Full locally executable test suite | PASS | 79/79 PASS, 0 skipped, with exact `jszip 3.10.1` supplied locally for release-critical archive tests. |
+| DEFECT-006 positive app readiness | PASS IN SOURCE | Both emulator gates use `uiautomator` plus `scripts/verify-app-ready-ui.mjs`; recovery shells fail and the real `AI Console v1.4.2` UI marker is mandatory. |
+| DEFECT-007 alternate APK route | PASS IN SOURCE | `npm run build:apk` fails closed; EAS APK creation is explicitly diagnostic-only under `diagnostic-preview`. |
+| DEFECT-008 release identity | PASS IN SOURCE | User-visible label/build documentation now use v1.4.2 / versionCode 11 / v1.4.2 APK naming. |
+| Clean `npm ci` | NOT_EXECUTABLE_HERE | Registry restoration timed out; offline retry failed because `zod-3.25.76.tgz` was not cached. |
+| `npm audit` / Expo install check / Expo Doctor | NOT_EXECUTED | Requires completed clean dependency restore. |
+| Metro/Expo Android export | NOT_EXECUTED | Attempt could not complete because clean dependency restoration was not established. |
+| Fresh APK build | NOT_EXECUTED | Requires GitHub/Android build environment. |
+| Android 16/API-36 cold launch | NOT EXECUTED | Workflow now requires process survival plus `ANDROID_16_APP_READY=PASS` for the same APK. |
+| Dedicated 16-KB runtime | NOT EXECUTED | Workflow now requires PAGE_SIZE=16384, process survival and `ANDROID_16K_APP_READY=PASS` for the same APK. |
+| Production signing | UNVERIFIABLE | Requires authorised secrets and certificate identity. |
+| Physical-device acceptance | UNVERIFIABLE | Requires actual Android-device execution. |
 
 ## Decision
 
-**READY FOR GITHUB — APK BUILD NOT VERIFIED.**
+**SOURCE REMEDIATION: PASS FOR DEFECT-005/006/007/008.**
 
-There is no known locally actionable repository-structure or CI-definition defect remaining from this pass. The remaining gates require dependency/network, GitHub Actions, Android emulator/device, signing secrets, or physical-device facilities. A GitHub workflow failure remains a failure to remediate; this status does not pre-approve the resulting APK.
+**PREVIOUS APK: NO-GO.**
+
+**FRESH APK RELEASE READINESS: UNVERIFIABLE UNTIL BUILD + MANDATORY RUNTIME GATES EXECUTE.**

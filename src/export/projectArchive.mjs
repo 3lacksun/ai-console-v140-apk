@@ -1,5 +1,5 @@
 import { validateZipEntries } from '../utils/archivePolicy.mjs';
-import { rawZipPreflight } from '../utils/rawZipPreflight.mjs';
+import { boundedBase64ToBytes, rawZipPreflight } from '../utils/rawZipPreflight.mjs';
 import { sanitiseDocumentForExport, sanitiseRevisionForExport } from '../documents/documentDomain.mjs';
 import { assertNoProhibitedProperties, sanitizeForOrdinaryExport } from '../utils/privacy.mjs';
 import { sha256Hex } from '../utils/sha256.mjs';
@@ -32,10 +32,10 @@ export const createProjectArchive = async (state, workspaceId) => {
 };
 
 export const parseProjectArchive = async (data) => {
-  const preflightBytes = typeof data === 'string' ? Uint8Array.from(globalThis.atob(data), (c) => c.charCodeAt(0)) : data;
+  const preflightBytes = typeof data === 'string' ? boundedBase64ToBytes(data) : data;
   rawZipPreflight(preflightBytes);
   const JSZip = await loadJSZip();
-  const zip = await JSZip.loadAsync(data, typeof data === 'string' ? { createFolders: false, base64: true } : { createFolders: false });
+  const zip = await JSZip.loadAsync(preflightBytes, { createFolders: false });
   const entries = Object.values(zip.files).map((entry) => ({ name: entry.name, dir: entry.dir, _data: entry._data || {} })); validateZipEntries(entries);
   const names = Object.keys(zip.files).filter((name) => !zip.files[name].dir);
   const allowedNames = new Set(['manifest.json','workspace.json','chats.json','documents.json','document-revisions.json','notes.json','tags.json','folders.json','bookmarks.json','files.json']);

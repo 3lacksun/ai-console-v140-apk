@@ -1,0 +1,398 @@
+TAP version 13
+# Subtest: safe archive paths are accepted
+ok 1 - safe archive paths are accepted
+  ---
+  duration_ms: 0.822369
+  type: 'test'
+  ...
+# Subtest: traversal and absolute paths are rejected
+ok 2 - traversal and absolute paths are rejected
+  ---
+  duration_ms: 0.262545
+  type: 'test'
+  ...
+# Subtest: zip entry-count, expansion and ratio limits are enforced
+ok 3 - zip entry-count, expansion and ratio limits are enforced
+  ---
+  duration_ms: 1.053918
+  type: 'test'
+  ...
+# Subtest: counts UTF-8 bytes exactly for ASCII and multibyte text
+ok 4 - counts UTF-8 bytes exactly for ASCII and multibyte text
+  ---
+  duration_ms: 0.144928
+  type: 'test'
+  ...
+# Subtest: PIN throttle locks after five failures and resets after expiry
+ok 5 - PIN throttle locks after five failures and resets after expiry
+  ---
+  duration_ms: 1.156452
+  type: 'test'
+  ...
+# Subtest: cancelled offline turns can be explicitly retried and interrupted sends recover as failed
+ok 6 - cancelled offline turns can be explicitly retried and interrupted sends recover as failed
+  ---
+  duration_ms: 0.383938
+  type: 'test'
+  ...
+# Subtest: message deletion removes all descendants and stale bookmarks
+ok 7 - message deletion removes all descendants and stale bookmarks
+  ---
+  duration_ms: 2.266304
+  type: 'test'
+  ...
+# Subtest: active chat is always scoped to the active workspace
+ok 8 - active chat is always scoped to the active workspace
+  ---
+  duration_ms: 0.558421
+  type: 'test'
+  ...
+# Subtest: base64 source length is rejected before decoding when over policy
+ok 9 - base64 source length is rejected before decoding when over policy
+  ---
+  duration_ms: 0.482797
+  type: 'test'
+  ...
+# Subtest: SHA-256 implementation matches standard known vectors
+ok 10 - SHA-256 implementation matches standard known vectors
+  ---
+  duration_ms: 0.587685
+  type: 'test'
+  ...
+# Subtest: conversation streaming is keyed by chat and request id with stale-callback guard
+ok 11 - conversation streaming is keyed by chat and request id with stale-callback guard
+  ---
+  duration_ms: 1.791288
+  type: 'test'
+  ...
+# Subtest: speech and mobile accessibility contract is present
+ok 12 - speech and mobile accessibility contract is present
+  ---
+  duration_ms: 0.722248
+  type: 'test'
+  ...
+# Subtest: general settings cannot configure LLM/provider/prompt values
+ok 13 - general settings cannot configure LLM/provider/prompt values
+  ---
+  duration_ms: 0.336487
+  type: 'test'
+  ...
+# Subtest: A to B migration is deterministic, idempotent, versioned, and removes transient attachment context
+ok 14 - A to B migration is deterministic, idempotent, versioned, and removes transient attachment context
+  ---
+  duration_ms: 1.384766
+  type: 'test'
+  ...
+# Subtest: edit, branch, switch and regenerate retain original branch and avoid duplicating the preceding user turn
+ok 15 - edit, branch, switch and regenerate retain original branch and avoid duplicating the preceding user turn
+  ---
+  duration_ms: 2.48307
+  type: 'test'
+  ...
+# Subtest: generation state rejects invalid transitions and supports terminal retry states
+ok 16 - generation state rejects invalid transitions and supports terminal retry states
+  ---
+  duration_ms: 0.479943
+  type: 'test'
+  ...
+# Subtest: generation manager prevents duplicate sends, cancels deleted chats, ignores stale callbacks, retries and recovers lifecycle interruptions
+ok 17 - generation manager prevents duplicate sends, cancels deleted chats, ignores stale callbacks, retries and recovers lifecycle interruptions
+  ---
+  duration_ms: 0.705733
+  type: 'test'
+  ...
+# Subtest: local organisation search, tags/folders, pin/archive and sort work without provider calls
+ok 18 - local organisation search, tags/folders, pin/archive and sort work without provider calls
+  ---
+  duration_ms: 0.340313
+  type: 'test'
+  ...
+# Subtest: exports use deterministic formats and reject secrets or transient fields on import
+ok 19 - exports use deterministic formats and reject secrets or transient fields on import
+  ---
+  duration_ms: 1.200979
+  type: 'test'
+  ...
+# Subtest: offline queue is persistent-domain safe, idempotent, retryable and cleans completed source turns
+ok 20 - offline queue is persistent-domain safe, idempotent, retryable and cleans completed source turns
+  ---
+  duration_ms: 0.350268
+  type: 'test'
+  ...
+# Subtest: safe markdown keeps code blocks while stripping executable markup and malformed links
+ok 21 - safe markdown keeps code blocks while stripping executable markup and malformed links
+  ---
+  duration_ms: 0.639163
+  type: 'test'
+  ...
+# file:///mnt/data/aiconsole_v142_remediate/work/tests/packageC.test.mjs:7
+#   throw new Error(`jszip dependency is required for release-critical ZIP/package tests: ${error?.message || error}`);
+#         ^
+# Error: jszip dependency is required for release-critical ZIP/package tests: Cannot find package 'jszip' imported from /mnt/data/aiconsole_v142_remediate/work/tests/packageC.test.mjs
+#     at file:///mnt/data/aiconsole_v142_remediate/work/tests/packageC.test.mjs:7:9
+# Node.js v22.16.0
+# Subtest: tests/packageC.test.mjs
+not ok 5 - tests/packageC.test.mjs
+  ---
+  duration_ms: 42.829213
+  type: 'test'
+  location: '/mnt/data/aiconsole_v142_remediate/work/tests/packageC.test.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: PBKDF2-HMAC-SHA256 matches a known vector
+ok 23 - PBKDF2-HMAC-SHA256 matches a known vector
+  ---
+  duration_ms: 1.950868
+  type: 'test'
+  ...
+# Subtest: protected PIN is stored as a salted verifier, not literal digits
+ok 24 - protected PIN is stored as a salted verifier, not literal digits
+  ---
+  duration_ms: 36.504246
+  type: 'test'
+  ...
+# Subtest: legacy plaintext PIN records are recognised for one-time migration
+ok 25 - legacy plaintext PIN records are recognised for one-time migration
+  ---
+  duration_ms: 0.125018
+  type: 'test'
+  ...
+# Subtest: transient attachment context is removed from persisted chats
+ok 26 - transient attachment context is removed from persisted chats
+  ---
+  duration_ms: 0.717851
+  type: 'test'
+  ...
+# (node:7397) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///mnt/data/aiconsole_v142_remediate/work/src/utils/streamChat.js is not specified and it doesn't parse as CommonJS.
+# Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+# To eliminate this warning, add "type": "module" to /mnt/data/aiconsole_v142_remediate/work/package.json.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: model sync requires an OpenRouter API key
+ok 27 - model sync requires an OpenRouter API key
+  ---
+  duration_ms: 0.888989
+  type: 'test'
+  ...
+# Subtest: model sync uses current OpenRouter authenticated models endpoint
+ok 28 - model sync uses current OpenRouter authenticated models endpoint
+  ---
+  duration_ms: 0.58404
+  type: 'test'
+  ...
+# Subtest: protected settings PIN requires exactly six digits
+ok 29 - protected settings PIN requires exactly six digits
+  ---
+  duration_ms: 0.847537
+  type: 'test'
+  ...
+# Subtest: SSE JSON split across chunks emits exactly once and final tail flushes
+ok 30 - SSE JSON split across chunks emits exactly once and final tail flushes
+  ---
+  duration_ms: 1.554061
+  type: 'test'
+  ...
+# Subtest: speech adapter accepts a complete compatible native module
+ok 31 - speech adapter accepts a complete compatible native module
+  ---
+  duration_ms: 0.886876
+  type: 'test'
+  ...
+# Subtest: speech adapter converts module load failure into an unavailable result
+ok 32 - speech adapter converts module load failure into an unavailable result
+  ---
+  duration_ms: 1.002951
+  type: 'test'
+  ...
+# Subtest: speech adapter rejects incomplete native bindings
+ok 33 - speech adapter rejects incomplete native bindings
+  ---
+  duration_ms: 0.195674
+  type: 'test'
+  ...
+# Subtest: application module loader contains import-time failures as data
+ok 34 - application module loader contains import-time failures as data
+  ---
+  duration_ms: 0.296366
+  type: 'test'
+  ...
+# Subtest: startup recovery boundary is established before App is dynamically loaded
+ok 35 - startup recovery boundary is established before App is dynamically loaded
+  ---
+  duration_ms: 0.926415
+  type: 'test'
+  ...
+# Subtest: navigation effects do not own global stream/speech cleanup
+ok 36 - navigation effects do not own global stream/speech cleanup
+  ---
+  duration_ms: 0.526843
+  type: 'test'
+  ...
+# Subtest: root render failures degrade to a recoverable shell instead of an uncaught blank/crash path
+ok 37 - root render failures degrade to a recoverable shell instead of an uncaught blank/crash path
+  ---
+  duration_ms: 1.164724
+  type: 'test'
+  ...
+# Subtest: optional speech recognition cannot fail during App module import
+ok 38 - optional speech recognition cannot fail during App module import
+  ---
+  duration_ms: 0.181303
+  type: 'test'
+  ...
+# Subtest: startup hydration has recovery and write-protection on failure
+ok 39 - startup hydration has recovery and write-protection on failure
+  ---
+  duration_ms: 0.308996
+  type: 'test'
+  ...
+# Subtest: startup import graph contains no unsupported latin1 TextDecoder and byte mapping is exact
+ok 40 - startup import graph contains no unsupported latin1 TextDecoder and byte mapping is exact
+  ---
+  duration_ms: 4.951629
+  type: 'test'
+  ...
+# Subtest: Android speech package visibility covers modern and legacy Google services
+ok 41 - Android speech package visibility covers modern and legacy Google services
+  ---
+  duration_ms: 0.281464
+  type: 'test'
+  ...
+# Subtest: CI requires executed Android cold-launch gates before an APK artefact can be published
+ok 42 - CI requires executed Android cold-launch gates before an APK artefact can be published
+  ---
+  duration_ms: 0.274243
+  type: 'test'
+  ...
+# Subtest: v1.3.2 local PDF extractor inventories pages and preserves page selection order
+ok 43 - v1.3.2 local PDF extractor inventories pages and preserves page selection order
+  ---
+  duration_ms: 2.464803
+  type: 'test'
+  ...
+# Subtest: v1.3.2 PDF operator extraction handles Tj and TJ text operators without fabricating OCR
+ok 44 - v1.3.2 PDF operator extraction handles Tj and TJ text operators without fabricating OCR
+  ---
+  duration_ms: 0.323146
+  type: 'test'
+  ...
+# Subtest: protected prompt export/import preserves enable, favourite and version metadata
+ok 45 - protected prompt export/import preserves enable, favourite and version metadata
+  ---
+  duration_ms: 3.210917
+  type: 'test'
+  ...
+# Subtest: attachment session supports explicit user-visible reordering
+ok 46 - attachment session supports explicit user-visible reordering
+  ---
+  duration_ms: 0.86921
+  type: 'test'
+  ...
+# Subtest: v3 to v4 migration is deterministic/idempotent and creates document collections
+ok 47 - v3 to v4 migration is deterministic/idempotent and creates document collections
+  ---
+  duration_ms: 1.915255
+  type: 'test'
+  ...
+# Subtest: document delete removes revisions and workspace relationships without corrupting active selection
+ok 48 - document delete removes revisions and workspace relationships without corrupting active selection
+  ---
+  duration_ms: 0.785924
+  type: 'test'
+  ...
+# Subtest: chat-to-document placement supports before after replace and append targets
+ok 49 - chat-to-document placement supports before after replace and append targets
+  ---
+  duration_ms: 0.549738
+  type: 'test'
+  ...
+# Subtest: local durable state retains protected project AI configuration while ordinary backup excludes it
+ok 50 - local durable state retains protected project AI configuration while ordinary backup excludes it
+  ---
+  duration_ms: 0.907186
+  type: 'test'
+  ...
+# Subtest: multiple documents stay scoped to workspaces and workspace delete preserves documents
+ok 51 - multiple documents stay scoped to workspaces and workspace delete preserves documents
+  ---
+  duration_ms: 1.499208
+  type: 'test'
+  ...
+# Subtest: structured editing and accessible reorder domain operations are deterministic
+ok 52 - structured editing and accessible reorder domain operations are deterministic
+  ---
+  duration_ms: 0.605523
+  type: 'test'
+  ...
+# Subtest: snapshots compare and restore non-destructively with checkpoint
+ok 53 - snapshots compare and restore non-destructively with checkpoint
+  ---
+  duration_ms: 0.554225
+  type: 'test'
+  ...
+# Subtest: chat-to-document and AI operations consume visible text only
+ok 54 - chat-to-document and AI operations consume visible text only
+  ---
+  duration_ms: 0.298489
+  type: 'test'
+  ...
+# Subtest: render serializers expose composition without hidden metadata
+ok 55 - render serializers expose composition without hidden metadata
+  ---
+  duration_ms: 0.653614
+  type: 'test'
+  ...
+# Subtest: raw ZIP preflight detects raw/normalised duplicates and traversal before JSZip
+ok 56 - raw ZIP preflight detects raw/normalised duplicates and traversal before JSZip
+  ---
+  duration_ms: 0.936151
+  type: 'test'
+  ...
+# Subtest: transactional restore verifies durable commit and verified rollback
+ok 57 - transactional restore verifies durable commit and verified rollback
+  ---
+  duration_ms: 1.132836
+  type: 'test'
+  ...
+# Subtest: autosave status transitions remain explicit and serialisation excludes hidden context
+ok 58 - autosave status transitions remain explicit and serialisation excludes hidden context
+  ---
+  duration_ms: 0.282756
+  type: 'test'
+  ...
+# Subtest: document project import remaps document/revision lineage
+ok 59 - document project import remaps document/revision lineage
+  ---
+  duration_ms: 0.819635
+  type: 'test'
+  ...
+# Subtest: workspace project merge remaps document revision lineage
+ok 60 - workspace project merge remaps document revision lineage
+  ---
+  duration_ms: 1.32777
+  type: 'test'
+  ...
+# Subtest: workspace and document payloads sanitise document/revision metadata
+ok 61 - workspace and document payloads sanitise document/revision metadata
+  ---
+  duration_ms: 0.342015
+  type: 'test'
+  ...
+# Subtest: responsive classifier, Back order and generation presentation are explicit
+ok 62 - responsive classifier, Back order and generation presentation are explicit
+  ---
+  duration_ms: 0.17928
+  type: 'test'
+  ...
+1..62
+# tests 62
+# suites 0
+# pass 61
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 277.510323

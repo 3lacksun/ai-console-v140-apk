@@ -1,0 +1,3 @@
+JSZIP_TEST_DEPENDENCY_SOURCE=/opt/nvm/versions/node/v22.16.0/lib/node_modules/pptxgenjs/node_modules/jszip
+JSZIP_VERSION=3.10.1
+NOTE=Temporary local test-resolution symlink only; node_modules is not packaged.

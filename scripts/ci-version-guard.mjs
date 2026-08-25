@@ -7,7 +7,7 @@ const app = readJson('app.json');
 const fail = (message) => { throw new Error(message); };
 const dep = (name) => pkg.dependencies?.[name] || pkg.devDependencies?.[name] || '';
 
-if (pkg.version !== '1.4.0') fail(`package.json version drift: ${pkg.version}`);
+if (pkg.version !== '1.4.2') fail(`package.json version drift: ${pkg.version}`);
 if (lock.name !== pkg.name) fail(`package-lock root name drift: ${lock.name} !== ${pkg.name}`);
 if (lock.version !== pkg.version) fail(`package-lock root version drift: ${lock.version} !== ${pkg.version}`);
 if (lock.packages?.['']?.version !== pkg.version) fail(`package-lock packages[''] version drift: ${lock.packages?.['']?.version} !== ${pkg.version}`);
@@ -30,10 +30,10 @@ if (dep('expo-speech-recognition') && !/^\^?57\./.test(dep('expo-speech-recognit
 }
 
 const expo = app.expo || {};
-if (expo.version !== '1.4.0') fail(`app.json version drift: ${expo.version}`);
+if (expo.version !== '1.4.2') fail(`app.json version drift: ${expo.version}`);
 if (expo.userInterfaceStyle !== 'light') fail(`app.json userInterfaceStyle must remain light, found ${expo.userInterfaceStyle}`);
 if (expo.android?.package !== 'com.nexarenew.aiconsole') fail(`Android package drift: ${expo.android?.package}`);
-if (expo.android?.versionCode !== 9) fail(`Android versionCode drift: ${expo.android?.versionCode}`);
+if (expo.android?.versionCode !== 11) fail(`Android versionCode drift: ${expo.android?.versionCode}`);
 console.log('ANDROID_SDK_36_RESOLUTION: guarded by Expo SDK 57 package alignment; workflow verifies generated Gradle compile/target SDK after Expo prebuild.');
 
 console.log('CI_VERSION_GUARD: PASS');

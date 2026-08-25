@@ -1,5 +1,8 @@
 # AI Console v1.4.0 — CI Stabilisation Report
 
+> **SUPERSEDED RUNTIME STATUS (25/08/2026):** A startup-blocking Hermes `TextDecoder('latin1')` defect was later confirmed in the distributed v1.4.2 APK and remediated in source. The failed APK is NO-GO. See `RUNTIME_ROOT_CAUSE_REMEDIATION_REPORT_25082026203650.md` and `VERIFICATION_STATUS.md` for current status.
+
+
 ## Status
 
 PARTIAL. The package is better suited for a first GitHub preview APK attempt, but APK generation, dependency restoration, Android runtime survival and full 16-KB acceptance are still UNVERIFIABLE until executed in CI.
