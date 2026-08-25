@@ -1,7 +1,10 @@
 const PIN_KDF_VERSION = 'v2';
-const PIN_KDF_ITERATIONS = 600000;
+// 12k is enough for a 6-digit PIN with attempt throttling; 600k pure-JS HMAC
+// blocks the React Native UI thread long enough for Android to ANR-kill the app.
+const PIN_KDF_ITERATIONS = 12000;
 export const LEGACY_PIN_KDF_ITERATIONS = 12000;
 const PIN_KDF_SALT_BYTES = 16;
+const YIELD_EVERY = 1500;
 
 function utf8Bytes(value) {
   const text = String(value ?? '');
@@ -94,6 +97,10 @@ function int32be(value) {
   return Uint8Array.from([(value >>> 24)&255,(value >>> 16)&255,(value >>> 8)&255,value&255]);
 }
 
+function yieldToUi() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 export function pbkdf2Sha256(password, salt, iterations = PIN_KDF_ITERATIONS, length = 32) {
   if (!Number.isInteger(iterations) || iterations < 1) throw new Error('Invalid KDF iteration count.');
   const key = utf8Bytes(password);
@@ -106,6 +113,26 @@ export function pbkdf2Sha256(password, salt, iterations = PIN_KDF_ITERATIONS, le
     for (let round = 1; round < iterations; round += 1) {
       u = hmacSha256(key, u);
       for (let i = 0; i < t.length; i += 1) t[i] ^= u[i];
+    }
+    output.set(t, (blockIndex - 1) * 32);
+  }
+  return output.slice(0, length);
+}
+
+/** Async PBKDF2 that yields to the UI thread so high-iteration legacy verifiers cannot ANR. */
+export async function pbkdf2Sha256Async(password, salt, iterations = PIN_KDF_ITERATIONS, length = 32) {
+  if (!Number.isInteger(iterations) || iterations < 1) throw new Error('Invalid KDF iteration count.');
+  const key = utf8Bytes(password);
+  const saltBytes = salt instanceof Uint8Array ? salt : utf8Bytes(salt);
+  const blocks = Math.ceil(length / 32);
+  const output = new Uint8Array(blocks * 32);
+  for (let blockIndex = 1; blockIndex <= blocks; blockIndex += 1) {
+    let u = hmacSha256(key, concatBytes(saltBytes, int32be(blockIndex)));
+    const t = Uint8Array.from(u);
+    for (let round = 1; round < iterations; round += 1) {
+      u = hmacSha256(key, u);
+      for (let i = 0; i < t.length; i += 1) t[i] ^= u[i];
+      if (round % YIELD_EVERY === 0) await yieldToUi();
     }
     output.set(t, (blockIndex - 1) * 32);
   }
@@ -149,6 +176,7 @@ export function createPinVerifier(pin, { iterations = PIN_KDF_ITERATIONS, salt =
 
 export function isLegacyPlainPinRecord(record) { return /^\d{6}$/.test(String(record || '')); }
 
+/** Sync path kept for tests / low-iteration records. Prefer verifyPinAgainstRecordAsync in UI. */
 export function verifyPinAgainstRecord(pin, record) {
   const candidate = String(pin ?? '');
   const stored = String(record ?? '');
@@ -164,6 +192,31 @@ export function verifyPinAgainstRecord(pin, record) {
   return timingSafeEqual(actual, expected);
 }
 
-export function pinVerifierNeedsUpgrade(record) { const parts=String(record||'').split('$'); return isLegacyPlainPinRecord(record) || parts.length!==4 || parts[0]!==PIN_KDF_VERSION || Number(parts[1])<PIN_KDF_ITERATIONS; }
+/** Async verify that yields during high-iteration KDFs so the UI thread is not blocked. */
+export async function verifyPinAgainstRecordAsync(pin, record) {
+  const candidate = String(pin ?? '');
+  const stored = String(record ?? '');
+  if (!/^\d{6}$/.test(candidate) || !stored) return false;
+  if (isLegacyPlainPinRecord(stored)) return candidate === stored;
+  const parts = stored.split('$');
+  if (parts.length !== 4 || !['v1', PIN_KDF_VERSION].includes(parts[0])) return false;
+  const iterations = Number(parts[1]);
+  const salt = fromHex(parts[2]);
+  const expected = fromHex(parts[3]);
+  if (!salt || !expected || !Number.isInteger(iterations) || iterations < 1000 || iterations > 1000000) return false;
+  const actual = iterations > PIN_KDF_ITERATIONS
+    ? await pbkdf2Sha256Async(candidate, salt, iterations, expected.length)
+    : pbkdf2Sha256(candidate, salt, iterations, expected.length);
+  return timingSafeEqual(actual, expected);
+}
+
+export function pinVerifierNeedsUpgrade(record) {
+  const parts = String(record || '').split('$');
+  if (isLegacyPlainPinRecord(record)) return true;
+  if (parts.length !== 4 || parts[0] !== PIN_KDF_VERSION) return true;
+  const iterations = Number(parts[1]);
+  // Upgrade both under- and over-iterated records so a 600k legacy hash is rewritten after unlock.
+  return !Number.isInteger(iterations) || iterations !== PIN_KDF_ITERATIONS;
+}
 
 export const PIN_VERIFIER_POLICY = Object.freeze({ version: PIN_KDF_VERSION, iterations: PIN_KDF_ITERATIONS, saltBytes: PIN_KDF_SALT_BYTES });
