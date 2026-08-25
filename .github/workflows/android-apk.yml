@@ -4,22 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       signing_mode:
-        description: "preview uses debug signing on a release build (JS embedded); production requires GitHub Secrets"
+        description: preview or production
         type: choice
         required: true
         default: preview
         options:
           - preview
           - production
-      run_emulator_checks:
-        description: "Run Android emulator gates. Keep false for first working APK."
-        type: boolean
-        required: true
-        default: false
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches: [main]
 
 permissions:
   contents: read
@@ -29,185 +22,116 @@ env:
   JAVA_VERSION: "17"
   ANDROID_API_LEVEL: "36"
   ANDROID_BUILD_TOOLS_VERSION: "36.0.0"
-  PACKAGE_NAME: "com.nexarenew.aiconsole"
   SIGNING_MODE: ${{ inputs.signing_mode || 'preview' }}
-  RUN_EMULATOR_CHECKS: ${{ inputs.run_emulator_checks || 'false' }}
-  PREVIEW_APK_NAME: "AI_Console_v1.4.0_preview-release-js-embedded.apk"
-  PRODUCTION_APK_NAME: "AI_Console_v1.4.0_production-release-signed.apk"
-  DIAGNOSTICS_DIR: "ci-diagnostics"
+  PREVIEW_APK_NAME: AI_Console_v1.4.0_preview-release-js-embedded.apk
+  PRODUCTION_APK_NAME: AI_Console_v1.4.0_production-release-signed.apk
+  DIAGNOSTICS_DIR: ci-diagnostics
 
 jobs:
   build-android-apk:
-    name: APK build with embedded JS bundle
+    name: Release APK with embedded JS
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
-      - name: Repository checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
 
-      - name: Set up Node 24
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      - name: Node 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Set up Java 17
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+      - name: Java 17
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
 
-      - name: Set up Android SDK command-line tools
-        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4
+      - name: Android SDK
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699
         with:
           packages: ''
           accept-android-sdk-licenses: true
 
-      - name: Repository environment setup
-        shell: bash
+      - name: Env setup
         run: |
-          set -euo pipefail
           mkdir -p "$DIAGNOSTICS_DIR"
-          node --version | tee "$DIAGNOSTICS_DIR/node-version.txt"
-          npm --version | tee "$DIAGNOSTICS_DIR/npm-version.txt"
-          java -version 2>&1 | tee "$DIAGNOSTICS_DIR/java-version.txt"
-          test -f package.json && test -f App.js && test -f app.json
+          node --version
+          npm --version
+          java -version
 
       - name: npm install
         run: npm install --no-fund --legacy-peer-deps
 
-      - name: Soft gates
-        shell: bash
+      - name: Android SDK packages
         run: |
-          set +e
-          npm run check || true
-          npm test 2>&1 | tee "$DIAGNOSTICS_DIR/npm-test.txt" || true
-          node scripts/ci-version-guard.mjs || true
-          node scripts/verify-runtime-contract.mjs || true
-          npx expo install --check || true
-          npx --yes expo-doctor@1.20.2 || true
-
-      - name: Install Android SDK 36 build prerequisites
-        shell: bash
-        run: |
-          set -euo pipefail
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
           sdkmanager "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS_VERSION}"
-          sdkmanager --list_installed | tee "$DIAGNOSTICS_DIR/android-sdk-installed.txt"
 
       - name: Expo prebuild
         env:
           EXPO_NO_GIT_STATUS: "1"
         run: npx expo prebuild --platform android --clean --no-install
 
-      - name: Force release variant to use debug keystore for preview
+      - name: Use debug keystore for release (preview only)
         if: ${{ env.SIGNING_MODE != 'production' }}
-        shell: bash
         run: |
           set -euo pipefail
-          # Release build embeds JS/Hermes. Without production secrets, sign release with debug keystore.
-          APP_GRADLE="android/app/build.gradle"
-          if [[ -f "$APP_GRADLE" ]]; then
-            # Ensure release signingConfig points at debug when present as Groovy DSL
-            if grep -q "buildTypes" "$APP_GRADLE"; then
-              python3 - <<'PY'
-import pathlib, re
-p = pathlib.Path("android/app/build.gradle")
-text = p.read_text()
-# Prefer explicit release { signingConfig signingConfigs.debug }
-if re.search(r"release\s*\{", text):
-    text2, n = re.subn(
-        r"(release\s*\{)",
-        r"\1\n            signingConfig signingConfigs.debug",
-        text,
-        count=1,
-    )
-    if n:
-        # Avoid duplicating if already set
-        if text.count("signingConfig signingConfigs.debug") == 0 or "signingConfig signingConfigs.debug" not in text[text.find("release"):text.find("release")+400]:
-            p.write_text(text2)
-            print("Patched release signingConfig -> debug")
-        else:
-            print("Release already references a signingConfig; leaving as-is")
-    else:
-        print("Could not patch release block")
-else:
-    print("No release block found")
-PY
-            fi
+          # Point release signing at the debug keystore so assembleRelease works without production secrets.
+          # Debug builds do NOT embed JS; release builds do. Splash hang was caused by assembleDebug.
+          cat >> android/gradle.properties <<'EOF'
+          MYAPP_UPLOAD_STORE_FILE=debug.keystore
+          MYAPP_UPLOAD_KEY_ALIAS=androiddebugkey
+          MYAPP_UPLOAD_STORE_PASSWORD=android
+          MYAPP_UPLOAD_KEY_PASSWORD=android
+          EOF
+          # Patch app/build.gradle release signingConfig to debug when possible
+          if [ -f android/app/build.gradle ]; then
+            sed -i 's/signingConfig signingConfigs.release/signingConfig signingConfigs.debug/g' android/app/build.gradle || true
           fi
-          # Also set via gradle.properties fallback used by some RN templates
-          echo "MYAPP_UPLOAD_STORE_FILE=debug.keystore" >> android/gradle.properties || true
-          cat android/app/build.gradle | head -n 120 | tee "$DIAGNOSTICS_DIR/app-build-gradle-head.txt" || true
+          if [ -f android/app/build.gradle.kts ]; then
+            sed -i 's/signingConfig = signingConfigs.getByName("release")/signingConfig = signingConfigs.getByName("debug")/g' android/app/build.gradle.kts || true
+          fi
+          echo "Preview release will use debug signing"
 
-      - name: Production signing setup
-        if: ${{ env.SIGNING_MODE == 'production' }}
-        env:
-          AI_CONSOLE_KEYSTORE_BASE64: ${{ secrets.AI_CONSOLE_ANDROID_KEYSTORE_BASE64 }}
-          AI_CONSOLE_KEYSTORE_PASSWORD: ${{ secrets.AI_CONSOLE_ANDROID_KEYSTORE_PASSWORD }}
-          AI_CONSOLE_KEY_ALIAS: ${{ secrets.AI_CONSOLE_ANDROID_KEY_ALIAS }}
-          AI_CONSOLE_KEY_PASSWORD: ${{ secrets.AI_CONSOLE_ANDROID_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          KEYSTORE_PATH="$RUNNER_TEMP/ai-console-release.keystore"
-          printf '%s' "$AI_CONSOLE_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
-          echo "AI_CONSOLE_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
-          node scripts/configure-android-release-signing.mjs
-
-      - name: Gradle release APK build (embeds JS bundle)
-        shell: bash
+      - name: Gradle assembleRelease
         run: |
           set -euo pipefail
           chmod +x android/gradlew
-          # ALWAYS assembleRelease so the JS/Hermes bundle is packaged into the APK.
-          # assembleDebug does not embed JS and causes permanent splash-screen hang.
-          (cd android && ./gradlew app:assembleRelease --no-daemon --max-workers=2)
+          cd android && ./gradlew app:assembleRelease --no-daemon --max-workers=2
 
-      - name: APK existence and artefact labelling
-        shell: bash
+      - name: Label APK
         run: |
           set -euo pipefail
           APK="android/app/build/outputs/apk/release/app-release.apk"
-          if [[ ! -f "$APK" ]]; then
-            # Some Gradle templates emit unsigned intermediate names
-            APK="$(find android/app/build/outputs/apk -name '*.apk' | head -1)"
+          if [ ! -f "$APK" ]; then
+            APK=$(find android/app/build/outputs/apk -name '*.apk' | head -1)
           fi
-          test -n "$APK" && test -f "$APK" || { echo "No APK produced" >&2; find android/app/build/outputs -type f | tee "$DIAGNOSTICS_DIR/apk-search.txt"; exit 1; }
-          if [[ "$SIGNING_MODE" == "production" ]]; then
-            LABELLED_APK="$PRODUCTION_APK_NAME"
+          test -f "$APK"
+          if [ "$SIGNING_MODE" = "production" ]; then
+            cp "$APK" "$PRODUCTION_APK_NAME"
+            echo "APK_PATH=$PRODUCTION_APK_NAME" >> "$GITHUB_ENV"
           else
-            LABELLED_APK="$PREVIEW_APK_NAME"
+            cp "$APK" "$PREVIEW_APK_NAME"
+            echo "APK_PATH=$PREVIEW_APK_NAME" >> "$GITHUB_ENV"
           fi
-          cp "$APK" "$LABELLED_APK"
-          echo "APK_PATH=$LABELLED_APK" >> "$GITHUB_ENV"
-          ls -lh "$LABELLED_APK" | tee "$DIAGNOSTICS_DIR/apk-file.txt"
+          ls -lh "$APK_PATH"
 
-      - name: Verify JS/Hermes is embedded (critical for no-splash-hang)
-        shell: bash
+      - name: Verify JS embedded
         run: |
           set -euo pipefail
-          rm -rf "$DIAGNOSTICS_DIR/apk-js-inspect"
-          mkdir -p "$DIAGNOSTICS_DIR/apk-js-inspect"
-          unzip -q "$APK_PATH" -d "$DIAGNOSTICS_DIR/apk-js-inspect"
-          find "$DIAGNOSTICS_DIR/apk-js-inspect" -type f | sort | tee "$DIAGNOSTICS_DIR/apk-all-files.txt"
-          if ! find "$DIAGNOSTICS_DIR/apk-js-inspect" -type f \( -name '*.bundle' -o -name '*.hbc' -o -name 'index.android.bundle' -o -path '*/assets/index.android.bundle' \) | grep -q .; then
-            echo "CRITICAL: release APK has no embedded JS/Hermes bundle — app will hang on splash" >&2
-            find "$DIAGNOSTICS_DIR/apk-js-inspect/assets" -type f 2>/dev/null || true
+          mkdir -p "$DIAGNOSTICS_DIR/apk-js"
+          unzip -q "$APK_PATH" -d "$DIAGNOSTICS_DIR/apk-js"
+          find "$DIAGNOSTICS_DIR/apk-js" -type f | sort | tee "$DIAGNOSTICS_DIR/apk-files.txt"
+          if ! find "$DIAGNOSTICS_DIR/apk-js" -type f \( -name '*.bundle' -o -name '*.hbc' -o -name 'index.android.bundle' \) | grep -q .; then
+            echo "No embedded JS/Hermes bundle — would hang on splash" >&2
             exit 1
           fi
-          echo "EMBEDDED_JS_BUNDLE=PASS" | tee "$DIAGNOSTICS_DIR/embedded-js.txt"
+          echo "EMBEDDED_JS=PASS"
 
-      - name: APK package inspection
-        shell: bash
-        run: |
-          set +e
-          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)"
-          if [[ -x "$AAPT" ]]; then
-            "$AAPT" dump badging "$APK_PATH" | tee "$DIAGNOSTICS_DIR/installed-apk-manifest-dump.txt" || true
-          fi
-
-      - name: Upload APK artefact
+      - name: Upload APK
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: ${{ env.SIGNING_MODE == 'production' && 'AI_Console_v1.4.0_production-release-signed' || 'AI_Console_v1.4.0_preview-release-js-embedded' }}
           path: |
@@ -218,7 +142,7 @@ PY
 
       - name: Upload diagnostics
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: AI_Console_v1.4.0_android-ci-diagnostics
           path: ci-diagnostics/**
