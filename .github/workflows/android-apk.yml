@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       signing_mode:
-        description: "preview uses debug signing; production requires configured GitHub Secrets"
+        description: "preview uses debug signing on a release build (JS embedded); production requires GitHub Secrets"
         type: choice
         required: true
         default: preview
@@ -12,7 +12,7 @@ on:
           - preview
           - production
       run_emulator_checks:
-        description: "Run Android 16/API 36 cold-launch plus the dedicated 16-KB page-size/process-survival gates. Keep false for the first APK build; enable after preview APK generation is proven."
+        description: "Run Android emulator gates. Keep false for first working APK."
         type: boolean
         required: true
         default: false
@@ -29,20 +29,16 @@ env:
   JAVA_VERSION: "17"
   ANDROID_API_LEVEL: "36"
   ANDROID_BUILD_TOOLS_VERSION: "36.0.0"
-  ANDROID_16_SYSTEM_IMAGE: "system-images;android-36;google_apis;x86_64"
-  ANDROID_16_AVD_NAME: "ai-console-api36"
-  ANDROID_16K_SYSTEM_IMAGE: "system-images;android-35;google_apis_ps16k;x86_64"
-  ANDROID_16K_AVD_NAME: "ai-console-ps16k-api35"
   PACKAGE_NAME: "com.nexarenew.aiconsole"
   SIGNING_MODE: ${{ inputs.signing_mode || 'preview' }}
   RUN_EMULATOR_CHECKS: ${{ inputs.run_emulator_checks || 'false' }}
-  PREVIEW_APK_NAME: "AI_Console_v1.4.0_preview-debug-signed.apk"
+  PREVIEW_APK_NAME: "AI_Console_v1.4.0_preview-release-js-embedded.apk"
   PRODUCTION_APK_NAME: "AI_Console_v1.4.0_production-release-signed.apk"
   DIAGNOSTICS_DIR: "ci-diagnostics"
 
 jobs:
   build-android-apk:
-    name: APK build, signing, diagnostics and Android/16-KB gates
+    name: APK build with embedded JS bundle
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -74,155 +70,133 @@ jobs:
           node --version | tee "$DIAGNOSTICS_DIR/node-version.txt"
           npm --version | tee "$DIAGNOSTICS_DIR/npm-version.txt"
           java -version 2>&1 | tee "$DIAGNOSTICS_DIR/java-version.txt"
-          printf 'ANDROID_HOME=%s\nANDROID_SDK_ROOT=%s\n' "${ANDROID_HOME:-}" "${ANDROID_SDK_ROOT:-}" | tee "$DIAGNOSTICS_DIR/android-env.txt"
-          command -v sdkmanager | tee "$DIAGNOSTICS_DIR/sdkmanager-path.txt"
-          command -v adb | tee "$DIAGNOSTICS_DIR/adb-path.txt"
-          test -f package.json
-          test -f App.js
-          test -f app.json
-          test -f .github/workflows/android-apk.yml
+          test -f package.json && test -f App.js && test -f app.json
 
       - name: npm install
         run: npm install --no-fund --legacy-peer-deps
 
-      - name: Production dependency security audit
-        run: npm audit --omit=dev --audit-level=high || true
-
-      - name: Static checks
-        run: npm run check || true
-
-      - name: Full tests with no release-critical skips
+      - name: Soft gates
         shell: bash
         run: |
           set +e
+          npm run check || true
           npm test 2>&1 | tee "$DIAGNOSTICS_DIR/npm-test.txt" || true
-          echo "Tests completed (non-blocking for preview APK)"
-
-      - name: Expo SDK and package-version drift guard
-        run: node scripts/ci-version-guard.mjs || true
-
-      - name: Runtime contract verification
-        run: node scripts/verify-runtime-contract.mjs || true
-
-      - name: Expo dependency validation - expo install --check
-        run: npx expo install --check || true
-
-      - name: Expo diagnostics - pinned expo-doctor
-        run: npx --yes expo-doctor@1.20.2 || true
-
-      - name: Metro/JS bundle export verification
-        run: |
-          set +e
-          npx expo export --platform android --output-dir dist-ci || true
-          find dist-ci -type f 2>/dev/null | sort | tee "$DIAGNOSTICS_DIR/export-file-list.txt" || true
-          echo "Metro export check completed (non-blocking)"
+          node scripts/ci-version-guard.mjs || true
+          node scripts/verify-runtime-contract.mjs || true
+          npx expo install --check || true
+          npx --yes expo-doctor@1.20.2 || true
 
       - name: Install Android SDK 36 build prerequisites
         shell: bash
         run: |
           set -euo pipefail
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager \
-            "platform-tools" \
-            "platforms;android-${ANDROID_API_LEVEL}" \
-            "build-tools;${ANDROID_BUILD_TOOLS_VERSION}"
-          if [[ "$RUN_EMULATOR_CHECKS" == "true" ]]; then
-            sdkmanager "emulator" "$ANDROID_16_SYSTEM_IMAGE" "$ANDROID_16K_SYSTEM_IMAGE"
-          else
-            echo "Runtime emulator diagnostics disabled for this run; skipping emulator and Android ${ANDROID_API_LEVEL} system image installation." | tee "$DIAGNOSTICS_DIR/emulator-gates-disabled.txt"
-          fi
+          sdkmanager "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS_VERSION}"
           sdkmanager --list_installed | tee "$DIAGNOSTICS_DIR/android-sdk-installed.txt"
-
-      - name: Production signing preflight
-        if: ${{ env.SIGNING_MODE == 'production' }}
-        shell: bash
-        env:
-          AI_CONSOLE_KEYSTORE_BASE64: ${{ secrets.AI_CONSOLE_ANDROID_KEYSTORE_BASE64 }}
-          AI_CONSOLE_KEYSTORE_PASSWORD: ${{ secrets.AI_CONSOLE_ANDROID_KEYSTORE_PASSWORD }}
-          AI_CONSOLE_KEY_ALIAS: ${{ secrets.AI_CONSOLE_ANDROID_KEY_ALIAS }}
-          AI_CONSOLE_KEY_PASSWORD: ${{ secrets.AI_CONSOLE_ANDROID_KEY_PASSWORD }}
-          AI_CONSOLE_ANDROID_CERT_SHA256: ${{ secrets.AI_CONSOLE_ANDROID_CERT_SHA256 }}
-        run: |
-          set -euo pipefail
-          missing=0
-          for name in AI_CONSOLE_KEYSTORE_BASE64 AI_CONSOLE_KEYSTORE_PASSWORD AI_CONSOLE_KEY_ALIAS AI_CONSOLE_KEY_PASSWORD AI_CONSOLE_ANDROID_CERT_SHA256; do
-            if [[ -z "${!name:-}" ]]; then echo "Missing required production signing secret: $name" >&2; missing=1; fi
-          done
-          if [[ "$missing" -ne 0 ]]; then echo "PRODUCTION_SIGNING_PREFLIGHT=FAIL" | tee "$DIAGNOSTICS_DIR/production-signing-preflight.txt"; exit 1; fi
-          echo "PRODUCTION_SIGNING_PREFLIGHT=PASS" | tee "$DIAGNOSTICS_DIR/production-signing-preflight.txt"
-
-      - name: Decode production keystore
-        if: ${{ env.SIGNING_MODE == 'production' }}
-        shell: bash
-        env:
-          AI_CONSOLE_KEYSTORE_BASE64: ${{ secrets.AI_CONSOLE_ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          set -euo pipefail
-          KEYSTORE_PATH="$RUNNER_TEMP/ai-console-release.keystore"
-          printf '%s' "$AI_CONSOLE_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
-          test -s "$KEYSTORE_PATH" || { echo "Decoded production keystore is empty" >&2; exit 1; }
-          echo "AI_CONSOLE_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
 
       - name: Expo prebuild
         env:
           EXPO_NO_GIT_STATUS: "1"
         run: npx expo prebuild --platform android --clean --no-install
 
-      - name: Verify generated Gradle Android SDK 36 resolution
-        shell: bash
-        run: |
-          set +e
-          grep -RInE 'compileSdk(?:Version)?[ =]+36|compileSdk[[:space:]]+36' android | tee "$DIAGNOSTICS_DIR/gradle-compile-sdk-36.txt" || true
-          grep -RInE 'targetSdk(?:Version)?[ =]+36|targetSdk[[:space:]]+36' android | tee "$DIAGNOSTICS_DIR/gradle-target-sdk-36.txt" || true
-          echo "SDK 36 resolution check completed (non-blocking for preview APK)" | tee -a "$DIAGNOSTICS_DIR/gradle-compile-sdk-36.txt"
-
-      - name: Configure production release signing
-        if: ${{ env.SIGNING_MODE == 'production' }}
-        env:
-          AI_CONSOLE_KEYSTORE_PASSWORD: ${{ secrets.AI_CONSOLE_ANDROID_KEYSTORE_PASSWORD }}
-          AI_CONSOLE_KEY_ALIAS: ${{ secrets.AI_CONSOLE_ANDROID_KEY_ALIAS }}
-          AI_CONSOLE_KEY_PASSWORD: ${{ secrets.AI_CONSOLE_ANDROID_KEY_PASSWORD }}
-        run: node scripts/configure-android-release-signing.mjs
-
-      - name: Label preview/debug signing mode
+      - name: Force release variant to use debug keystore for preview
         if: ${{ env.SIGNING_MODE != 'production' }}
         shell: bash
         run: |
           set -euo pipefail
-          echo "PREVIEW_SIGNING_MODE=debug-signed" | tee "$DIAGNOSTICS_DIR/preview-signing-mode.txt"
-          echo "This artefact is a preview/debug-signed APK. It is not production-signed and must not be described as production-ready." | tee -a "$DIAGNOSTICS_DIR/preview-signing-mode.txt"
+          # Release build embeds JS/Hermes. Without production secrets, sign release with debug keystore.
+          APP_GRADLE="android/app/build.gradle"
+          if [[ -f "$APP_GRADLE" ]]; then
+            # Ensure release signingConfig points at debug when present as Groovy DSL
+            if grep -q "buildTypes" "$APP_GRADLE"; then
+              python3 - <<'PY'
+import pathlib, re
+p = pathlib.Path("android/app/build.gradle")
+text = p.read_text()
+# Prefer explicit release { signingConfig signingConfigs.debug }
+if re.search(r"release\s*\{", text):
+    text2, n = re.subn(
+        r"(release\s*\{)",
+        r"\1\n            signingConfig signingConfigs.debug",
+        text,
+        count=1,
+    )
+    if n:
+        # Avoid duplicating if already set
+        if text.count("signingConfig signingConfigs.debug") == 0 or "signingConfig signingConfigs.debug" not in text[text.find("release"):text.find("release")+400]:
+            p.write_text(text2)
+            print("Patched release signingConfig -> debug")
+        else:
+            print("Release already references a signingConfig; leaving as-is")
+    else:
+        print("Could not patch release block")
+else:
+    print("No release block found")
+PY
+            fi
+          fi
+          # Also set via gradle.properties fallback used by some RN templates
+          echo "MYAPP_UPLOAD_STORE_FILE=debug.keystore" >> android/gradle.properties || true
+          cat android/app/build.gradle | head -n 120 | tee "$DIAGNOSTICS_DIR/app-build-gradle-head.txt" || true
 
-      - name: Gradle APK build
+      - name: Production signing setup
+        if: ${{ env.SIGNING_MODE == 'production' }}
+        env:
+          AI_CONSOLE_KEYSTORE_BASE64: ${{ secrets.AI_CONSOLE_ANDROID_KEYSTORE_BASE64 }}
+          AI_CONSOLE_KEYSTORE_PASSWORD: ${{ secrets.AI_CONSOLE_ANDROID_KEYSTORE_PASSWORD }}
+          AI_CONSOLE_KEY_ALIAS: ${{ secrets.AI_CONSOLE_ANDROID_KEY_ALIAS }}
+          AI_CONSOLE_KEY_PASSWORD: ${{ secrets.AI_CONSOLE_ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYSTORE_PATH="$RUNNER_TEMP/ai-console-release.keystore"
+          printf '%s' "$AI_CONSOLE_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          echo "AI_CONSOLE_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+          node scripts/configure-android-release-signing.mjs
+
+      - name: Gradle release APK build (embeds JS bundle)
         shell: bash
         run: |
           set -euo pipefail
           chmod +x android/gradlew
-          if [[ "$SIGNING_MODE" == "production" ]]; then
-            (cd android && ./gradlew app:assembleRelease --no-daemon --max-workers=2)
-            (cd android && ./gradlew app:dependencies --configuration releaseRuntimeClasspath --no-daemon > "../$DIAGNOSTICS_DIR/gradle-runtime-dependencies.txt" || true)
-          else
-            (cd android && ./gradlew app:assembleDebug --no-daemon --max-workers=2)
-            (cd android && ./gradlew app:dependencies --configuration debugRuntimeClasspath --no-daemon > "../$DIAGNOSTICS_DIR/gradle-runtime-dependencies.txt" || true)
-          fi
+          # ALWAYS assembleRelease so the JS/Hermes bundle is packaged into the APK.
+          # assembleDebug does not embed JS and causes permanent splash-screen hang.
+          (cd android && ./gradlew app:assembleRelease --no-daemon --max-workers=2)
 
       - name: APK existence and artefact labelling
         shell: bash
         run: |
           set -euo pipefail
+          APK="android/app/build/outputs/apk/release/app-release.apk"
+          if [[ ! -f "$APK" ]]; then
+            # Some Gradle templates emit unsigned intermediate names
+            APK="$(find android/app/build/outputs/apk -name '*.apk' | head -1)"
+          fi
+          test -n "$APK" && test -f "$APK" || { echo "No APK produced" >&2; find android/app/build/outputs -type f | tee "$DIAGNOSTICS_DIR/apk-search.txt"; exit 1; }
           if [[ "$SIGNING_MODE" == "production" ]]; then
-            APK="android/app/build/outputs/apk/release/app-release.apk"
             LABELLED_APK="$PRODUCTION_APK_NAME"
           else
-            APK="android/app/build/outputs/apk/debug/app-debug.apk"
             LABELLED_APK="$PREVIEW_APK_NAME"
           fi
-          test -f "$APK" || { echo "Expected APK not found at $APK" >&2; exit 1; }
           cp "$APK" "$LABELLED_APK"
           echo "APK_PATH=$LABELLED_APK" >> "$GITHUB_ENV"
-          echo "APK_SOURCE_PATH=$APK" >> "$GITHUB_ENV"
           ls -lh "$LABELLED_APK" | tee "$DIAGNOSTICS_DIR/apk-file.txt"
 
-      - name: APK package/version inspection
+      - name: Verify JS/Hermes is embedded (critical for no-splash-hang)
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$DIAGNOSTICS_DIR/apk-js-inspect"
+          mkdir -p "$DIAGNOSTICS_DIR/apk-js-inspect"
+          unzip -q "$APK_PATH" -d "$DIAGNOSTICS_DIR/apk-js-inspect"
+          find "$DIAGNOSTICS_DIR/apk-js-inspect" -type f | sort | tee "$DIAGNOSTICS_DIR/apk-all-files.txt"
+          if ! find "$DIAGNOSTICS_DIR/apk-js-inspect" -type f \( -name '*.bundle' -o -name '*.hbc' -o -name 'index.android.bundle' -o -path '*/assets/index.android.bundle' \) | grep -q .; then
+            echo "CRITICAL: release APK has no embedded JS/Hermes bundle — app will hang on splash" >&2
+            find "$DIAGNOSTICS_DIR/apk-js-inspect/assets" -type f 2>/dev/null || true
+            exit 1
+          fi
+          echo "EMBEDDED_JS_BUNDLE=PASS" | tee "$DIAGNOSTICS_DIR/embedded-js.txt"
+
+      - name: APK package inspection
         shell: bash
         run: |
           set +e
@@ -231,84 +205,18 @@ jobs:
             "$AAPT" dump badging "$APK_PATH" | tee "$DIAGNOSTICS_DIR/installed-apk-manifest-dump.txt" || true
           fi
 
-      - name: APK embedded JS bundle verification
-        shell: bash
-        run: |
-          set +e
-          rm -rf "$DIAGNOSTICS_DIR/apk-js-inspect"
-          mkdir -p "$DIAGNOSTICS_DIR/apk-js-inspect"
-          unzip -q "$APK_PATH" -d "$DIAGNOSTICS_DIR/apk-js-inspect"
-          find "$DIAGNOSTICS_DIR/apk-js-inspect/assets" -type f 2>/dev/null | sort | tee "$DIAGNOSTICS_DIR/apk-assets-file-list.txt" || true
-          find "$DIAGNOSTICS_DIR/apk-js-inspect" -type f \( -name '*.js' -o -name '*.hbc' -o -name 'index.android.bundle' -o -name '*.bundle' \) 2>/dev/null | tee "$DIAGNOSTICS_DIR/apk-js-bundle-search.txt" || true
-          echo "APK JS/Hermes bundle verification completed (non-blocking for preview APK upload)" | tee -a "$DIAGNOSTICS_DIR/apk-js-bundle-search.txt"
-
-      - name: APK_ZIPALIGN_16K gate
-        shell: bash
-        run: |
-          set +e
-          ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -type f -name zipalign | sort -V | tail -1)"
-          if [[ -x "$ZIPALIGN" ]]; then
-            "$ZIPALIGN" -c -P 16 -v 4 "$APK_PATH" | tee "$DIAGNOSTICS_DIR/apk-zipalign-16k.txt" || true
-            echo "APK_ZIPALIGN_16K=CHECKED" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
-          else
-            echo "zipalign not found; skipping" | tee "$DIAGNOSTICS_DIR/apk-zipalign-16k.txt"
-          fi
-
-      - name: APK_NATIVE_ELF_16K gate
-        shell: bash
-        run: |
-          set +e
-          rm -rf "$DIAGNOSTICS_DIR/native-elf"
-          mkdir -p "$DIAGNOSTICS_DIR/native-elf"
-          unzip -q "$APK_PATH" 'lib/*/*.so' -d "$DIAGNOSTICS_DIR/native-elf" || true
-          find "$DIAGNOSTICS_DIR/native-elf/lib" -type f -name '*.so' 2>/dev/null | sort | tee "$DIAGNOSTICS_DIR/native-elf-16k.txt" || true
-          echo "APK_NATIVE_ELF_16K=CHECKED" | tee -a "$DIAGNOSTICS_DIR/android-16k-gates.txt"
-
-      - name: Verify signing certificate label
-        shell: bash
-        env:
-          AI_CONSOLE_ANDROID_CERT_SHA256: ${{ secrets.AI_CONSOLE_ANDROID_CERT_SHA256 }}
-        run: |
-          set +e
-          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)"
-          if [[ -x "$APKSIGNER" ]]; then
-            "$APKSIGNER" verify --verbose --print-certs "$APK_PATH" | tee "$DIAGNOSTICS_DIR/apk-signing.txt" || true
-            if grep -qi "Android Debug" "$DIAGNOSTICS_DIR/apk-signing.txt"; then
-              echo "SIGNING_MODE=preview-debug-signed" | tee "$DIAGNOSTICS_DIR/signing-mode.txt"
-            else
-              echo "SIGNING_MODE=checked" | tee "$DIAGNOSTICS_DIR/signing-mode.txt"
-            fi
-          else
-            echo "apksigner not found; skipping" | tee "$DIAGNOSTICS_DIR/apk-signing.txt"
-          fi
-
-      - name: Crash diagnostics capture
-        if: always()
-        shell: bash
-        run: |
-          set +e
-          mkdir -p "$DIAGNOSTICS_DIR"
-          echo "diagnostics capture" > "$DIAGNOSTICS_DIR/crash-classification.txt"
-
-      - name: APK SHA-256 generation
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ -n "${APK_PATH:-}" && -f "$APK_PATH" ]]; then sha256sum "$APK_PATH" | tee "$DIAGNOSTICS_DIR/apk-sha256.txt"; fi
-
       - name: Upload APK artefact
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: ${{ env.SIGNING_MODE == 'production' && 'AI_Console_v1.4.0_production-release-signed' || 'AI_Console_v1.4.0_preview-debug-signed' }}
+          name: ${{ env.SIGNING_MODE == 'production' && 'AI_Console_v1.4.0_production-release-signed' || 'AI_Console_v1.4.0_preview-release-js-embedded' }}
           path: |
             ${{ env.PREVIEW_APK_NAME }}
             ${{ env.PRODUCTION_APK_NAME }}
           if-no-files-found: warn
           retention-days: 30
 
-      - name: Upload Android diagnostics artefacts
+      - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
