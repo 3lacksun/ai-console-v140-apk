@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { registerRootComponent } from 'expo';
 import * as SplashScreen from 'expo-splash-screen';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import App from './App';
 import AppErrorBoundary from './src/components/AppErrorBoundary';
 
@@ -14,9 +15,11 @@ function Root() {
   }, []);
 
   return (
-    <AppErrorBoundary>
-      <App />
-    </AppErrorBoundary>
+    <SafeAreaProvider>
+      <AppErrorBoundary>
+        <App />
+      </AppErrorBoundary>
+    </SafeAreaProvider>
   );
 }
 
