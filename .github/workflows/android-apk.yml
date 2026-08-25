@@ -108,13 +108,13 @@ jobs:
           fi
           test -f "$APK"
           if [ "$SIGNING_MODE" = "production" ]; then
-            cp "$APK" "$PRODUCTION_APK_NAME"
-            echo "APK_PATH=$PRODUCTION_APK_NAME" >> "$GITHUB_ENV"
+            OUT="$PRODUCTION_APK_NAME"
           else
-            cp "$APK" "$PREVIEW_APK_NAME"
-            echo "APK_PATH=$PREVIEW_APK_NAME" >> "$GITHUB_ENV"
+            OUT="$PREVIEW_APK_NAME"
           fi
-          ls -lh "$APK_PATH"
+          cp "$APK" "$OUT"
+          echo "APK_PATH=$OUT" >> "$GITHUB_ENV"
+          ls -lh "$OUT"
 
       - name: Verify JS embedded
         run: |
