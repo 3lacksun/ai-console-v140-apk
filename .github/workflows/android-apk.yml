@@ -77,15 +77,13 @@ jobs:
         if: ${{ env.SIGNING_MODE != 'production' }}
         run: |
           set -euo pipefail
-          # Ensure a trailing newline before appending so the last existing key is not concatenated.
-          # Debug builds do NOT embed JS; release builds do. Splash hang was caused by assembleDebug.
+          # Ensure a trailing newline, then append clean key=value lines (no leading whitespace).
+          # Debug builds do NOT embed JS; release builds do.
           printf '\n' >> android/gradle.properties
-          cat >> android/gradle.properties <<'EOF'
-          MYAPP_UPLOAD_STORE_FILE=debug.keystore
-          MYAPP_UPLOAD_KEY_ALIAS=androiddebugkey
-          MYAPP_UPLOAD_STORE_PASSWORD=android
-          MYAPP_UPLOAD_KEY_PASSWORD=android
-          EOF
+          printf 'MYAPP_UPLOAD_STORE_FILE=debug.keystore\n' >> android/gradle.properties
+          printf 'MYAPP_UPLOAD_KEY_ALIAS=androiddebugkey\n' >> android/gradle.properties
+          printf 'MYAPP_UPLOAD_STORE_PASSWORD=android\n' >> android/gradle.properties
+          printf 'MYAPP_UPLOAD_KEY_PASSWORD=android\n' >> android/gradle.properties
           # Force release signingConfig to use the debug keystore for preview builds.
           if [ -f android/app/build.gradle ]; then
             sed -i 's/signingConfig signingConfigs.release/signingConfig signingConfigs.debug/g' android/app/build.gradle || true
