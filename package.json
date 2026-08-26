@@ -1,6 +1,6 @@
 {
   "name": "command-centre",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "private": true,
   "main": "index.js",
   "scripts": {
@@ -25,6 +25,7 @@
     "expo-document-picker": "~57.0.1",
     "expo-file-system": "~57.0.5",
     "expo-image-picker": "57.0.12",
+    "expo-local-authentication": "~57.0.2",
     "expo-print": "~57.0.1",
     "expo-screen-capture": "^57.0.2",
     "expo-secure-store": "~57.0.1",

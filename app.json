@@ -2,7 +2,7 @@
   "expo": {
     "name": "Dr Stone's Command Centre",
     "slug": "command-centre",
-    "version": "1.5.4",
+    "version": "1.5.5",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -14,7 +14,7 @@
       "package": "com.nexarenew.aiconsole",
       "allowBackup": false,
       "softwareKeyboardLayoutMode": "resize",
-      "versionCode": 19,
+      "versionCode": 20,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -54,6 +54,7 @@
       ],
       "expo-secure-store",
       "expo-screen-capture",
+      "expo-local-authentication",
       "./plugins/withDisallowBackup",
       "expo-sharing",
       "expo-status-bar",
