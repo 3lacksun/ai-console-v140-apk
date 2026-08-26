@@ -165,3 +165,19 @@ export const IconRedo = ({ size = 18, color = '#f4f4f5' }) => (<Svg {...base(siz
 export const IconSearch = ({ size = 18, color = '#f4f4f5' }) => (<Svg {...base(size, color)}><Circle cx="11" cy="11" r="7"/><Line x1="20" y1="20" x2="16.65" y2="16.65"/></Svg>);
 export const IconCamera = ({ size = 20, color = '#f4f4f5' }) => (<Svg {...base(size, color)}><Path d="M3 7h4l2-3h6l2 3h4v13H3z"/><Circle cx="12" cy="13" r="4"/></Svg>);
 export const IconGallery = ({ size = 20, color = '#f4f4f5' }) => (<Svg {...base(size, color)}><Rect x="3" y="3" width="18" height="18" rx="2"/><Circle cx="8.5" cy="8.5" r="1.5"/><Polyline points="21 15 16 10 5 21"/></Svg>);
+
+export const IconSpeak = ({ size = 16, color = '#f4f4f5' }) => (
+  <Svg {...base(size, color)}>
+    <Polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+    <Path d="M15.5 8.5a5 5 0 0 1 0 7" />
+    <Path d="M19 5a9 9 0 0 1 0 14" />
+  </Svg>
+);
+export const IconImageGen = ({ size = 20, color = '#f4f4f5' }) => (
+  <Svg {...base(size, color)}>
+    <Rect x="3" y="3" width="18" height="18" rx="2" />
+    <Circle cx="8.5" cy="8.5" r="1.5" />
+    <Polyline points="21 15 16 10 5 21" />
+    <Path d="M14 3v4h4" />
+  </Svg>
+);
