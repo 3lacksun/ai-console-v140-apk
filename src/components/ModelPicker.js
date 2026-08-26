@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Modal, SectionList, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IconClose, IconCheck, IconServer } from './Icons';
 import { radii } from '../theme';
 import { useModalAccessibilityFocus, useReducedMotion } from '../ui/primitives';
@@ -8,6 +9,7 @@ export default function ModelPicker({ visible, onClose, modelGroups, selectedId,
   const styles = useMemo(() => createStyles(palette), [palette]);
   const reducedMotion = useReducedMotion();
   const modalTitleRef = useModalAccessibilityFocus(visible, returnFocusRef);
+  const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
   const normalisedQuery = query.trim().toLocaleLowerCase();
   const sections = useMemo(() => Object.entries(modelGroups)
@@ -23,7 +25,7 @@ export default function ModelPicker({ visible, onClose, modelGroups, selectedId,
     <Modal visible={visible} animationType={reducedMotion ? 'none' : 'slide'} transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close model picker" />
-        <View style={styles.sheet} accessibilityViewIsModal>
+        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 12) }]} accessibilityViewIsModal>
           <View style={styles.header}>
             <View style={styles.headerTitleRow}><IconServer size={16} color={palette.textMuted} /><Text ref={modalTitleRef} accessible accessibilityRole="header" style={styles.headerTitle}>Select Model</Text></View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn} accessibilityLabel="Close model picker" accessibilityRole="button"><IconClose size={18} color={palette.textMuted} /></TouchableOpacity>

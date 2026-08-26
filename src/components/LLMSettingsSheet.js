@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Slider from '@react-native-community/slider';
 import { IconKey, IconServer, IconRefresh, IconClose } from './Icons';
 import { radii } from '../theme';
@@ -21,6 +22,7 @@ export default function LLMSettingsSheet({
   const styles = useMemo(() => createStyles(palette), [palette]);
   const reducedMotion = useReducedMotion();
   const modalTitleRef = useModalAccessibilityFocus(visible, returnFocusRef);
+  const insets = useSafeAreaInsets();
   const [showKey, setShowKey] = useState(false);
   const [tokenDraft, setTokenDraft] = useState(String(maxTokens));
   useEffect(() => { setTokenDraft(String(maxTokens)); }, [maxTokens]);
@@ -29,7 +31,7 @@ export default function LLMSettingsSheet({
     <Modal visible={visible} animationType={reducedMotion ? 'none' : 'slide'} transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} accessibilityLabel="Lock and close AI settings" accessibilityRole="button" />
-        <View style={styles.sheet} accessibilityViewIsModal>
+        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 12) }]} accessibilityViewIsModal>
           <View style={styles.header}>
             <View style={styles.titleRow}><IconKey color={palette.cyanBright} /><Text ref={modalTitleRef} accessible accessibilityRole="header" style={styles.headerTitle}>Protected AI & Prompt Settings</Text></View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn} accessibilityLabel="Lock and close AI settings" accessibilityRole="button"><IconClose size={18} color={palette.textMuted} /></TouchableOpacity>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IconChat, IconClose, IconEdit, IconPlus, IconTrash } from './Icons';
 import { radii } from '../theme';
 import { useModalAccessibilityFocus, useReducedMotion } from '../ui/primitives';
@@ -9,6 +10,7 @@ export default function ChatManager({ visible, onClose, chats, activeChatId, gen
   const styles = useMemo(() => createStyles(palette), [palette]);
   const reducedMotion = useReducedMotion();
   const modalTitleRef = useModalAccessibilityFocus(visible, returnFocusRef);
+  const insets = useSafeAreaInsets();
   const [editingId, setEditingId] = useState(null);
   const [draftName, setDraftName] = useState('');
   const [query, setQuery] = useState('');
@@ -46,7 +48,7 @@ export default function ChatManager({ visible, onClose, chats, activeChatId, gen
   return <Modal visible={visible} animationType={reducedMotion ? 'none' : 'slide'} transparent onRequestClose={onClose}>
     <View style={styles.backdrop}>
       <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close conversation manager" />
-      <View style={styles.sheet} accessibilityViewIsModal>
+      <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 12) }]} accessibilityViewIsModal>
         <View style={styles.header}><View style={styles.headerTitleRow}><IconChat size={18} color={palette.cyanBright} /><Text ref={modalTitleRef} accessible accessibilityRole="header" style={styles.headerTitle}>Workflow Chats</Text></View><TouchableOpacity style={styles.closeBtn} onPress={onClose} accessibilityLabel="Close conversation manager" accessibilityRole="button"><IconClose size={18} color={palette.textMuted} /></TouchableOpacity></View>
         <TouchableOpacity style={styles.newChatBtn} onPress={() => { onCreate(); onClose(); }} accessibilityRole="button"><IconPlus size={17} color="#ffffff" /><Text style={styles.newChatText}>New Root Chat</Text></TouchableOpacity>
         <TextInput value={query} onChangeText={setQuery} placeholder="Search workflow chats and message text" placeholderTextColor={palette.textFaint} style={styles.search} accessibilityLabel="Search conversations locally" />

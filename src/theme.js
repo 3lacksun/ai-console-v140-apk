@@ -48,7 +48,7 @@ export const LIGHT_COLORS = {
   roseBorder: '#fda4af',
   roseToast: '#e11d48',
   emerald: '#059669',
-  overlay: 'rgba(15,23,42,0.34)',
+  overlay: 'rgba(15,23,42,0.58)',
   userText: '#ffffff',
 };
 
