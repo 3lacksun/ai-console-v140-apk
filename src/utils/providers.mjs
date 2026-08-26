@@ -6,7 +6,7 @@ export const PROVIDERS = Object.freeze({
     modelsUrl: 'https://openrouter.ai/api/v1/models',
     defaultModel: 'openrouter/auto',
     keyPlaceholder: 'sk-or-v1-...',
-    referer: 'https://ai-console.app',
+    referer: 'https://github.com/3lacksun/ai-console-v140-apk',
     title: "Dr Stone's Command Centre",
   },
   together: {
@@ -16,7 +16,7 @@ export const PROVIDERS = Object.freeze({
     modelsUrl: 'https://api.together.xyz/v1/models',
     defaultModel: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
     keyPlaceholder: 'together-...',
-    referer: 'https://ai-console.app',
+    referer: 'https://github.com/3lacksun/ai-console-v140-apk',
     title: "Dr Stone's Command Centre",
   },
 });
@@ -29,4 +29,8 @@ export function resolveProvider(id) {
 
 export function isValidProvider(id) {
   return Boolean(PROVIDERS[id]);
+}
+
+export function hasProviderKey(key) {
+  return Boolean(String(key || '').trim());
 }
