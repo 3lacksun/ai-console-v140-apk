@@ -28,10 +28,19 @@ export function stripPrivateProperties(value, { exportScope = false } = {}) {
   for (const [key, child] of Object.entries(value)) if (!isProhibitedPropertyKey(key, { exportScope })) out[key] = stripPrivateProperties(child, { exportScope });
   return out;
 }
+const safeLocalUri = (value) => {
+  const uri = String(value || '').trim();
+  if (!uri) return '';
+  if (uri.startsWith('data:')) return '';
+  if (/^(file|content|https|http):/i.test(uri) || uri.startsWith('/')) return uri;
+  return '';
+};
 const safeAttachment = (attachment) => {
   if (!attachment || typeof attachment !== 'object') return undefined;
   const out = {};
   for (const key of ['id','name','type','mimeType','size','source','status','requiresReattach']) if (attachment[key] !== undefined) out[key] = attachment[key];
+  const imageUri = safeLocalUri(attachment.imageUri);
+  if (imageUri) out.imageUri = imageUri;
   return Object.keys(out).length ? out : undefined;
 };
 export function sanitizeMessageForPersistence(message = {}) {
@@ -45,6 +54,8 @@ export function sanitizeMessageForPersistence(message = {}) {
     updatedAt: Number(message.updatedAt) || Number(message.createdAt) || 0,
   };
   for (const key of ['editedFromMessageId','regeneratedFromMessageId','failedAttemptId']) if (message[key]) safe[key] = message[key];
+  const imageUri = safeLocalUri(message.imageUri);
+  if (imageUri) safe.imageUri = imageUri;
   const attachment = safeAttachment(message.attachment); if (attachment) safe.attachment = attachment;
   return safe;
 }

@@ -30,11 +30,11 @@ test('application module loader contains import-time failures as data', async ()
   assert.equal(ready.ok, true); assert.equal(ready.component, component);
 });
 
-test('startup recovery boundary is established before App is dynamically loaded', () => {
+test('startup recovery boundary wraps the statically bundled App so splash cannot hang on a missing dynamic module', () => {
   const entry = read('index.js'); const app = read('App.js');
-  assert.doesNotMatch(entry, /import\s+App\s+from\s+['"]\.\/App['"]/);
-  assert.match(entry, /loadApplicationModule\(\(\)=>Promise\.resolve\(\)\.then\(\(\)=>require\('\.\/App'\)\)\)/);
-  assert.match(entry, /function StartupErrorBoundary/); assert.match(entry, /registerRootComponent\(Bootstrap\)/);
+  assert.match(entry, /import\s+App\s+from\s+['"]\.\/App['"]/);
+  assert.match(entry, /AppErrorBoundary/);
+  assert.match(entry, /registerRootComponent/);
   assert.doesNotMatch(app, /from 'expo-speech-recognition'/);
   assert.match(app, /loadSpeechRecognitionModule\(\)/);
   assert.match(app, /Startup recovery mode:/);

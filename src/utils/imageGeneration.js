@@ -51,8 +51,8 @@ async function requestOnce(apiKey, model, prompt) {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
-      'HTTP-Referer': 'https://ai-console.app',
-      'X-Title': 'AI Console',
+      'HTTP-Referer': 'https://github.com/3lacksun/ai-console-v140-apk',
+      'X-Title': "Dr Stone's Command Centre",
     },
     body: JSON.stringify({
       model,
