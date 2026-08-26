@@ -173,16 +173,8 @@ export function streamChatCompletion({
     runFetch().catch((error) => {
       if (settled) return;
       if (error?.name === 'AbortError') return;
-      const msg = String(error?.message || '').toLowerCase();
-      if (msg.includes('auth') || msg.includes('api key') || msg.includes('401') || msg.includes('403') || msg.includes('missing')) {
-        settleError(error);
-        return;
-      }
-      try {
-        runXhr();
-      } catch (xhrError) {
-        settleError(error?.message ? error : xhrError);
-      }
+      // Do not fall back to XHR: Android RN can drop Authorization on XHR.
+      settleError(error);
     });
   } else {
     try {

@@ -1,7 +1,7 @@
 /**
  * Optional local OCR adapter.
- * Uses a dynamically imported engine when present; otherwise reports unavailable
- * so images still attach for vision models.
+ * This APK does not ship an OCR engine. Images still attach as vision payloads.
+ * A runtime engine, if present, is a supplement — never a replacement for the image.
  */
 export const localOcrAdapter = {
   async recognise(source) {
