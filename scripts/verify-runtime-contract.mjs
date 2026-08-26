@@ -9,15 +9,19 @@ const lock = readJson('package-lock.json');
 const app = readJson('app.json').expo;
 const deps = pkg.dependencies || {};
 
-const EXPECTED_VERSION = '1.4.2';
-const EXPECTED_ANDROID_VERSION_CODE = 11;
+const EXPECTED_VERSION = '1.5.5';
+const EXPECTED_ANDROID_VERSION_CODE = 20;
 const EXPECTED_ANDROID_PACKAGE = 'com.nexarenew.aiconsole';
 const EXPECTED_EXPO_MAJOR = '57';
 const EXPECTED_REACT = '19.2.3';
 const EXPECTED_REACT_NATIVE = '0.86.2';
+const EXPO_MAJOR_EXCEPTIONS = new Set([
+  'expo-speech-recognition', // guarded adapter, SDK 56 line until 57 is published
+  'expo-av', // Expo 57 ships expo-av 16
+]);
 
 if (pkg.version !== EXPECTED_VERSION || app.version !== EXPECTED_VERSION) {
-  fail(`AI Console release identity must be v${EXPECTED_VERSION}.`);
+  fail(`Command Centre release identity must be v${EXPECTED_VERSION}.`);
 }
 
 if (lock.version !== EXPECTED_VERSION || lock.packages?.['']?.version !== EXPECTED_VERSION) {
@@ -41,7 +45,7 @@ if (deps.react !== EXPECTED_REACT || deps['react-native'] !== EXPECTED_REACT_NAT
 }
 
 for (const [name, version] of Object.entries(deps)) {
-  if (name.startsWith('expo-') && name !== 'expo-speech-recognition' && major(version) !== EXPECTED_EXPO_MAJOR) {
+  if (name.startsWith('expo-') && !EXPO_MAJOR_EXCEPTIONS.has(name) && major(version) !== EXPECTED_EXPO_MAJOR) {
     fail(`${name} is not aligned to Expo SDK ${EXPECTED_EXPO_MAJOR}: ${version}`);
   }
 }
@@ -54,8 +58,8 @@ if (!app.plugins?.some((entry) => (Array.isArray(entry) ? entry[0] : entry) === 
   fail('Speech-recognition native configuration is missing.');
 }
 
-if (app.userInterfaceStyle !== 'light' || app.backgroundColor !== '#f8fafc') {
-  fail('Light-only release appearance contract is inconsistent.');
+if (!['automatic', 'light', 'dark'].includes(app.userInterfaceStyle)) {
+  fail('Release appearance contract is inconsistent.');
 }
 
 console.log('RUNTIME_CONTRACT: PASS');
