@@ -4,5 +4,5 @@ export const uiTokens = Object.freeze({
   touch: { minimum: 48 },
   motion: { fast: 140, normal: 220, reduced: 0 },
   breakpoints: { compactMax: 699, mediumMax: 999, expandedMin: 1000 },
-  elevation: { flat: 0, raised: 2, floating: 5 },
+  elevation: { flat: 0, raised: 3, floating: 8 },
 });
