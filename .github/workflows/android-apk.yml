@@ -63,6 +63,9 @@ jobs:
       - name: npm install
         run: npm install --no-fund --legacy-peer-deps
 
+      - name: Apply v1.5.5 App.js remediations
+        run: node scripts/apply-v155-app-remediation.mjs
+
       - name: Android SDK packages
         run: |
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
