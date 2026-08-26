@@ -1,4 +1,4 @@
-# Building AI Console v1.4.2
+# Building Command Centre v1.5.5
 
 ## Build model
 
@@ -12,8 +12,8 @@ AI Console is an Expo SDK 57 / React Native 0.86 project using **Continuous Nati
 - Android Build Tools: 36.0.0 in GitHub Actions
 - npm lockfile: `package-lock.json`
 - Application ID: `com.nexarenew.aiconsole`
-- Expo app version: `1.4.2`
-- Android versionCode: `11`
+- Expo app version: `1.5.5`
+- Android versionCode: `20`
 
 ## Clean local verification
 
@@ -44,30 +44,20 @@ Run this only after `npm ci` has restored the exact lockfile dependency tree.
 
 ## APK release-path policy
 
-`npm run build:apk` is deliberately fail-closed. Publishable preview or production APKs must be built by `.github/workflows/android-apk.yml` with the Android runtime gates enabled. This prevents an EAS/local build from being mistaken for a release-accepted APK.
+`npm run build:apk` is deliberately fail-closed. Publishable preview or production APKs must be built by `.github/workflows/android-apk.yml`. This prevents an EAS/local build from being mistaken for a release-accepted APK.
 
 For build diagnostics only, `npm run build:apk:diagnostic` uses the EAS `diagnostic-preview` profile. Any APK produced by that command is **diagnostic only** and must not be published, promoted, or described as runtime-accepted.
 
 ## Preview APK
 
-The preview path deliberately uses Gradle's debug variant so its signing state is deterministic and does not depend on production secrets:
-
 ```bash
 cd android
-./gradlew app:assembleDebug --no-daemon --max-workers=2
+./gradlew app:assembleRelease --no-daemon --max-workers=2
 ```
 
-Expected output:
-
-```text
-android/app/build/outputs/apk/debug/app-debug.apk
-```
-
-GitHub CI publishes it as `AI_Console_v1.4.2_preview-debug-signed.apk` after verifying that the APK exposes Android Debug signer evidence.
+GitHub CI publishes it as `CommandCentre_v1.5.5_preview-debug-signed.apk` after Expo prebuild, release assemble and embedded-JS verification.
 
 ## Production APK
-
-Production uses the release variant only after the authorised keystore has been reconstructed in runner temporary storage and the generated Gradle project has been configured for release signing:
 
 ```bash
 cd android
@@ -81,17 +71,6 @@ android/app/build/outputs/apk/release/app-release.apk
 ```
 
 Production CI additionally verifies the certificate SHA-256 against `AI_CONSOLE_ANDROID_CERT_SHA256`. Never commit a production keystore or signing password.
-
-## Android 16 and 16-KB acceptance
-
-The workflow intentionally treats these as two separate runtime gates:
-
-1. **Android 16/API 36 cold launch** — `system-images;android-36;google_apis;x86_64`, requiring API level 36, successful install/start, 30-second process survival and no fatal startup log evidence.
-2. **Dedicated 16-KB runtime** — `system-images;android-35;google_apis_ps16k;x86_64`, requiring `adb shell getconf PAGE_SIZE` to return `16384`, successful install/start and process survival.
-
-Before either runtime gate, CI also checks APK ZIP alignment with `zipalign -c -P 16 -v 4` and checks 64-bit native ELF LOAD alignment.
-
-For release candidates these runtime gates are fail-closed: `run_emulator_checks=true` is the default for push/PR and manual release-candidate runs, and the APK artefact upload step is blocked unless the gates actually execute and pass. A manual false value is diagnostic-only.
 
 ## GitHub build
 
