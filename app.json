@@ -2,10 +2,10 @@
   "expo": {
     "name": "AI Console",
     "slug": "ai-console",
-    "version": "1.4.5",
+    "version": "1.4.6",
     "orientation": "default",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "backgroundColor": "#f8fafc",
     "assetBundlePatterns": [
       "**/*"
@@ -13,7 +13,7 @@
     "android": {
       "package": "com.nexarenew.aiconsole",
       "softwareKeyboardLayoutMode": "resize",
-      "versionCode": 13,
+      "versionCode": 14,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#f8fafc"

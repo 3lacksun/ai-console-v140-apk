@@ -57,7 +57,7 @@ import { normalisePinThrottle, pinThrottleRemainingMs, recordPinFailure, resetPi
 
 const calculateEstimatedTokens = (text = '') => Math.ceil(String(text).length / 4);
 const PIN_THROTTLE_STORAGE_KEY = 'aiConsolePinThrottle';
-const APP_RELEASE_LABEL = 'AI Console v1.4.5';
+const APP_RELEASE_LABEL = 'AI Console v1.4.6';
 
 let cachedSpeechRecognitionModule = null;
 
@@ -192,7 +192,7 @@ function AIConsoleApp() {
         setTemperature(Number(storedTemp) || 0.2);
         setMaxTokens(normaliseOutputTokens(storedMaxTokens));
         setConversationState(state);
-        setColorMode('light');
+        setColorMode(storedMode === 'dark' ? 'dark' : 'light');
         setVoiceLocale(typeof storedLocale === 'string' ? storedLocale : 'en-GB');
         setPlaybackSpeed(Number(storedPlaybackSpeed) || 1);
         setPrimaryDestination(['chats', 'workspaces', 'documents', 'settings'].includes(storedDestination) ? storedDestination : 'chats');
@@ -598,7 +598,7 @@ function AIConsoleApp() {
       </View>
     )}
   </View></KeyboardAvoidingView>
-  <SettingsSheet visible={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} onExportChat={() => handleExport('txt')} onExportPdf={() => handleExportPdf(PDF_LAYOUTS.POLISHED)} onExportPdfCompact={() => handleExportPdf(PDF_LAYOUTS.COMPACT)} onCreateDocumentZip={handleCreateDocumentZip} onClearChat={() => { if (activeChat) Alert.alert('Clear chat?', 'Delete every message in this chat? This cannot be undone.', [{text:'Cancel',style:'cancel'},{text:'Clear',style:'destructive',onPress:()=>{stopGenerationForChat(activeChat.id);updateChat(activeChat.id,(chat)=>({...chat,messages:[],bookmarks:[]}));}}]); }} onExportData={() => handleExport('json')} onImportData={handleImport} onBackup={handleBackup} onRestore={handleRestore} dataStats={{ chats: chats.length, archived: chats.filter((chat) => chat.archived).length, attachments: chats.reduce((total, chat) => total + chat.messages.filter((message) => message.attachment).length, 0), queued: conversationState.offlineQueue.length, schema: conversationState.storageSchemaVersion }} colorMode={colorMode} onToggleColorMode={() => setColorMode('light')} voiceLocale={voiceLocale} onChangeVoiceLocale={setVoiceLocale} playbackSpeed={playbackSpeed} onChangePlaybackSpeed={setPlaybackSpeed} onStopSpeech={handleStopSpeech} hapticsEnabled={hapticsEnabled} onToggleHaptics={setHapticsEnabled} returnFocusRef={settingsTriggerRef} palette={palette} />
+  <SettingsSheet visible={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} onExportChat={() => handleExport('txt')} onExportPdf={() => handleExportPdf(PDF_LAYOUTS.POLISHED)} onExportPdfCompact={() => handleExportPdf(PDF_LAYOUTS.COMPACT)} onCreateDocumentZip={handleCreateDocumentZip} onClearChat={() => { if (activeChat) Alert.alert('Clear chat?', 'Delete every message in this chat? This cannot be undone.', [{text:'Cancel',style:'cancel'},{text:'Clear',style:'destructive',onPress:()=>{stopGenerationForChat(activeChat.id);updateChat(activeChat.id,(chat)=>({...chat,messages:[],bookmarks:[]}));}}]); }} onExportData={() => handleExport('json')} onImportData={handleImport} onBackup={handleBackup} onRestore={handleRestore} dataStats={{ chats: chats.length, archived: chats.filter((chat) => chat.archived).length, attachments: chats.reduce((total, chat) => total + chat.messages.filter((message) => message.attachment).length, 0), queued: conversationState.offlineQueue.length, schema: conversationState.storageSchemaVersion }} colorMode={colorMode} onToggleColorMode={() => setColorMode((mode) => (mode === 'dark' ? 'light' : 'dark'))} voiceLocale={voiceLocale} onChangeVoiceLocale={setVoiceLocale} playbackSpeed={playbackSpeed} onChangePlaybackSpeed={setPlaybackSpeed} onStopSpeech={handleStopSpeech} hapticsEnabled={hapticsEnabled} onToggleHaptics={setHapticsEnabled} returnFocusRef={settingsTriggerRef} palette={palette} />
   <LLMSettingsSheet visible={isLLMSettingsOpen} onClose={() => { setIsModelPickerOpen(false); setIsLLMSettingsOpen(false); }} apiKey={apiKey} onChangeApiKey={setApiKeyState} currentModelName={currentModelName()} onOpenModelPicker={() => setIsModelPickerOpen(true)} systemPrompt={systemPrompt} onChangeSystemPrompt={setSystemPrompt} temperature={temperature} onChangeTemperature={setTemperature} maxTokens={maxTokens} onChangeMaxTokens={(value) => setMaxTokens(normaliseOutputTokens(value))} isFetchingModels={isFetchingModels} onSyncModels={handleSyncModels} onChangePin={() => { setIsLLMSettingsOpen(false); setPinGateMode('change'); setPinGateOpen(true); }} onOpenProtectedWorkspaceTools={() => setIsProtectedWorkspaceToolsOpen(true)} apiKeyPersistenceStatus={apiKeyPersistenceStatus} returnFocusRef={protectedSettingsTriggerRef} palette={palette} />
   <AttachmentSourceSheet visible={isAttachmentSourceOpen} onClose={() => setIsAttachmentSourceOpen(false)} onDocument={handlePickFile} onCamera={handleAddCamera} onGallery={handleAddGallery} onGenerateImage={handleGenerateImage} returnFocusRef={attachmentTriggerRef} palette={palette} />
   <PdfReviewSheet visible={Boolean(pdfReview)} job={pdfReview?.job} selectedPages={pdfSelectedPages} onTogglePage={handleTogglePdfPage} onUse={handleUsePdfPages} onCancel={handleCancelPdfReview} returnFocusRef={attachmentTriggerRef} palette={palette} />
