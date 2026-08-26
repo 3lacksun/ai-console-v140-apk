@@ -23,10 +23,10 @@ export default class AppErrorBoundary extends React.Component {
     return (
       <SafeAreaView style={styles.root}>
         <View style={styles.card} accessibilityRole="alert">
-          <Text style={styles.title}>AI Console could not open this screen safely.</Text>
+          <Text style={styles.title}>Command Centre could not open this screen safely.</Text>
           <Text style={styles.body}>Your saved data has not been cleared. Retry the interface; if the problem returns, use the runtime diagnostic build rather than reinstalling or deleting app data.</Text>
-          <TouchableOpacity style={styles.button} onPress={this.retry} accessibilityRole="button" accessibilityLabel="Retry AI Console">
-            <Text style={styles.buttonText}>Retry AI Console</Text>
+          <TouchableOpacity style={styles.button} onPress={this.retry} accessibilityRole="button" accessibilityLabel="Retry Command Centre">
+            <Text style={styles.buttonText}>Retry Command Centre</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>

@@ -16,7 +16,7 @@ function authHeaders(key) {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${key}`,
     'HTTP-Referer': 'https://ai-console.app',
-    'X-Title': 'AI Console',
+    'X-Title': "Dr Stone's Command Centre",
   };
 }
 
@@ -208,7 +208,7 @@ export async function fetchModels(apiKey) {
     headers: {
       Authorization: `Bearer ${key}`,
       'HTTP-Referer': 'https://ai-console.app',
-      'X-Title': 'AI Console',
+      'X-Title': "Dr Stone's Command Centre",
     },
   });
   if (!response.ok) {

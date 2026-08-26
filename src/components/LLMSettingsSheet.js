@@ -33,7 +33,7 @@ export default function LLMSettingsSheet({
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} accessibilityLabel="Lock and close AI settings" accessibilityRole="button" />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 12) }]} accessibilityViewIsModal>
           <View style={styles.header}>
-            <View style={styles.titleRow}><IconKey color={palette.cyanBright} /><Text ref={modalTitleRef} accessible accessibilityRole="header" style={styles.headerTitle}>Protected AI & Prompt Settings</Text></View>
+            <View style={styles.titleRow}><IconKey color={palette.cyanBright} /><Text ref={modalTitleRef} accessible accessibilityRole="header" style={styles.headerTitle}>Protected Command Settings</Text></View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn} accessibilityLabel="Lock and close AI settings" accessibilityRole="button"><IconClose size={18} color={palette.textMuted} /></TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">

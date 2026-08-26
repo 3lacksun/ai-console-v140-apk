@@ -1,6 +1,6 @@
 {
-  "name": "ai-console",
-  "version": "1.4.6",
+  "name": "command-centre",
+  "version": "1.5.0",
   "private": true,
   "main": "index.js",
   "scripts": {
