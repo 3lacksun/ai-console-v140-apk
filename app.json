@@ -2,7 +2,7 @@
   "expo": {
     "name": "AI Console",
     "slug": "ai-console",
-    "version": "1.4.4",
+    "version": "1.4.5",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -13,13 +13,17 @@
     "android": {
       "package": "com.nexarenew.aiconsole",
       "softwareKeyboardLayoutMode": "resize",
-      "versionCode": 12,
+      "versionCode": 13,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#f8fafc"
       },
       "permissions": [
-        "INTERNET"
+        "INTERNET",
+        "RECORD_AUDIO",
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "READ_EXTERNAL_STORAGE"
       ],
       "blockedPermissions": [
         "android.permission.SYSTEM_ALERT_WINDOW"

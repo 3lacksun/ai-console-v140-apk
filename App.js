@@ -57,13 +57,14 @@ import { normalisePinThrottle, pinThrottleRemainingMs, recordPinFailure, resetPi
 
 const calculateEstimatedTokens = (text = '') => Math.ceil(String(text).length / 4);
 const PIN_THROTTLE_STORAGE_KEY = 'aiConsolePinThrottle';
-const APP_RELEASE_LABEL = 'AI Console v1.4.4';
+const APP_RELEASE_LABEL = 'AI Console v1.4.5';
 
 let cachedSpeechRecognitionModule = null;
 
 function AIConsoleApp() {
   const [hydrated, setHydrated] = useState(false);
   const [apiKey, setApiKeyState] = useState('');
+  const apiKeyRef = useRef('');
   const [modelGroups, setModelGroups] = useState(INITIAL_MODELS);
   const [model, setModel] = useState('openrouter/auto');
   const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT);
@@ -183,6 +184,7 @@ function AIConsoleApp() {
         if (!mounted) return;
         apiKeyReadHealthyRef.current = storedKeyResult.ok;
         setApiKeyState(storedKeyResult.value);
+        apiKeyRef.current = String(storedKeyResult.value || '').trim();
         setApiKeyPersistenceStatus(storedKeyResult.ok ? 'READ_OK' : 'READ_FAILED');
         setModelGroups(storedGroups && typeof storedGroups === 'object' ? storedGroups : INITIAL_MODELS);
         setModel(storedModel);
@@ -215,6 +217,7 @@ function AIConsoleApp() {
       skipInitialApiKeyPersistRef.current = false;
       return;
     }
+    apiKeyRef.current = String(apiKey || '').trim();
     const revision = ++apiKeyPersistRevisionRef.current;
     persistApiKey(apiKey).then((result) => {
       if (revision !== apiKeyPersistRevisionRef.current) return;
@@ -387,7 +390,7 @@ function AIConsoleApp() {
     generationManagerRef.current.start({ chatId, targetMessageId, streamFactory: (callbacks) => {
       const requestId = `request-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       const isCurrentRequest = () => streamRefs.current.get(chatId)?.requestId === requestId;
-      const stream = streamChatCompletion({ apiKey, model, messages: apiMessages, temperature, maxTokens, onDelta: (delta) => { if (isCurrentRequest()) { response += delta; callbacks.onDelta(delta); } }, onDone: () => { if (isCurrentRequest()) callbacks.onDone(); }, onError: (streamError) => { if (isCurrentRequest()) { setError(`API Error: ${streamError.message}`); callbacks.onError(streamError); } } });
+      const stream = streamChatCompletion({ apiKey: apiKeyRef.current || apiKey, model, messages: apiMessages, temperature, maxTokens, onDelta: (delta) => { if (isCurrentRequest()) { response += delta; callbacks.onDelta(delta); } }, onDone: () => { if (isCurrentRequest()) callbacks.onDone(); }, onError: (streamError) => { if (isCurrentRequest()) { setError(`API Error: ${streamError.message}`); callbacks.onError(streamError); } } });
       streamRefs.current.set(chatId, { requestId, stream });
       return stream;
     } });
@@ -409,7 +412,7 @@ function AIConsoleApp() {
       setError(files.length ? 'Draft queued. Attachment metadata is retained, but files must be reattached before sending after restart.' : 'Draft queued for delivery when online.');
       return;
     }
-    if (!apiKey.trim()) { requestProtectedSettingsAccess(); return; }
+    if (!(apiKeyRef.current || apiKey).trim()) { setError('No API key loaded. Open the key icon, paste your OpenRouter key (sk-or-v1-...), and wait for “Saved securely”.'); requestProtectedSettingsAccess(); return; }
     const textParts=[]; const imageParts=[];
     for (const file of files) {
       const context=attachmentExtractsRef.current.get(file.id);
@@ -430,7 +433,7 @@ function AIConsoleApp() {
     const request=buildProviderRequest(nextChat,target.messageId); setPendingPromptContext(null); startGeneration(activeChat.id,target.messageId,request);
   };
   const handleRegenerate = (message) => { if (!activeChat || isLoading || !apiKey.trim()) return; try { const next=regenerateAssistant(conversationState,activeChat.id,message.messageId); const nextChat=next.chats.find(c=>c.id===activeChat.id),target=nextChat.messages.at(-1); setConversationState(next); startGeneration(activeChat.id,target.messageId,buildProviderRequest(nextChat,target.messageId,null)); } catch(e){setError(e.message);} };
-  const handleRetryGeneration = (message) => { if (!activeChat || !apiKey.trim()) return; const prior=generationRequestsRef.current.get(activeChat.id); if(!prior||prior.targetMessageId!==message.messageId){setError('No failed or cancelled request is available to retry for this response.');return;} setConversationState(previous=>updateMessageContent(previous,activeChat.id,message.messageId,'')); try { generationManagerRef.current.retry(activeChat.id,(callbacks)=>{const requestId=`retry-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;const isCurrentRequest=()=>streamRefs.current.get(activeChat.id)?.requestId===requestId;const stream=streamChatCompletion({apiKey,model,messages:prior.apiMessages,temperature,maxTokens,onDelta:(delta)=>{if(isCurrentRequest())callbacks.onDelta(delta);},onDone:()=>{if(isCurrentRequest())callbacks.onDone();},onError:(e)=>{if(isCurrentRequest())callbacks.onError(e);}});streamRefs.current.set(activeChat.id,{requestId,stream});return stream;}); }catch(e){setError(e.message||'Retry failed.');} };
+  const handleRetryGeneration = (message) => { if (!activeChat || !apiKey.trim()) return; const prior=generationRequestsRef.current.get(activeChat.id); if(!prior||prior.targetMessageId!==message.messageId){setError('No failed or cancelled request is available to retry for this response.');return;} setConversationState(previous=>updateMessageContent(previous,activeChat.id,message.messageId,'')); try { generationManagerRef.current.retry(activeChat.id,(callbacks)=>{const requestId=`retry-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;const isCurrentRequest=()=>streamRefs.current.get(activeChat.id)?.requestId===requestId;const stream=streamChatCompletion({apiKey: apiKeyRef.current || apiKey,model,messages:prior.apiMessages,temperature,maxTokens,onDelta:(delta)=>{if(isCurrentRequest())callbacks.onDelta(delta);},onDone:()=>{if(isCurrentRequest())callbacks.onDone();},onError:(e)=>{if(isCurrentRequest())callbacks.onError(e);}});streamRefs.current.set(activeChat.id,{requestId,stream});return stream;}); }catch(e){setError(e.message||'Retry failed.');} };
   const dispatchQueuedTurn = (turn) => { if (offlineMode || !apiKey.trim() || !turn || turn.status!==QueueStatus.QUEUED) return; if (turn.providerContextRequired) { setConversationState(previous=>({...previous,offlineQueue:markFailed(markSending(previous.offlineQueue,turn.id),turn.id,'Attachments must be reattached before this queued draft can be sent.')})); return; } const current=conversationStateRef.current,chat=current.chats.find(c=>c.id===turn.chatId); if(!chat){setConversationState(previous=>({...previous,offlineQueue:markFailed(markSending(previous.offlineQueue,turn.id),turn.id,'Destination chat no longer exists.')}));return;} let next={...current,offlineQueue:markSending(current.offlineQueue,turn.id)}; next=appendTurn(next,chat.id,{role:'user',content:turn.content,apiContent:turn.content}); const nextChat=next.chats.find(c=>c.id===chat.id),target=nextChat.messages.at(-1); conversationStateRef.current=next;setConversationState(next);startGeneration(chat.id,target.messageId,buildProviderRequest(nextChat,target.messageId,null),{queueId:turn.id}); };
   const retryQueuedTurn=(id)=>setConversationState(previous=>({...previous,offlineQueue:retryTurn(previous.offlineQueue,id)}));
   const cancelQueuedTurn=(id)=>setConversationState(previous=>({...previous,offlineQueue:cancelTurn(previous.offlineQueue,id)}));
@@ -551,14 +554,14 @@ function AIConsoleApp() {
     setConversationState((previous) => ({ ...previous, documentGenerationJobs: [...(previous.documentGenerationJobs || []).filter((item) => item.id !== job.id && item.documentId !== job.documentId), { id: job.id, documentId: job.documentId, sectionId: job.sectionId || null, operation: job.operation, status: job.status, createdAt: job.createdAt, updatedAt: Date.now(), error: job.error || null }] }));
   };
   const handleAiDocumentOperation = (operation, doc, sectionId = null) => {
-    if (!apiKey.trim()) { requestProtectedSettingsAccess(); return; }
+    if (!(apiKeyRef.current || apiKey).trim()) { setError('No API key loaded. Open the key icon, paste your OpenRouter key (sk-or-v1-...), and wait for “Saved securely”.'); requestProtectedSettingsAccess(); return; }
     if (!doc || (operation !== 'append' && !sectionId)) { setError(`Choose a target section before AI ${operation}.`); return; }
     if (documentGenerationRef.current?.stream && documentGenerationRef.current?.job?.status === 'STREAMING') { setError('A document generation is already active. Stop it before starting another.'); return; }
     const job = { id: `docjob-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, documentId: doc.id, sectionId, operation, status: 'STREAMING', createdAt: Date.now(), baseUpdatedAt: doc.updatedAt, error: null };
     updateDocumentGenerationJob(job);
     let result = '';
     const instruction = `Perform a ${operation} document operation. Return only the replacement or inserted document text.\n\nVisible document:\n${renderDocumentText(doc)}`;
-    const stream = streamChatCompletion({ apiKey, model, temperature, maxTokens, messages: [{ role:'system', content:effectiveSystemPrompt() }, { role:'user', content:instruction }], onDelta:(delta)=>{ if (documentGenerationRef.current?.job?.id === job.id) { result += delta; setDocumentGeneration((current) => current?.id === job.id ? { ...current, receivedCharacters: result.length } : current); } }, onDone:()=>{ const currentState = conversationStateRef.current; const currentDoc = (currentState.documents || []).find((item) => item.id === job.documentId); const targetExists = operation === 'append' || currentDoc?.sections?.some((section) => section.id === job.sectionId); if (!currentDoc || currentDoc.updatedAt !== job.baseUpdatedAt || !targetExists) { const failed={...job,status:'FAILED',error:'Document changed while AI generation was running; stale output was not applied.'}; documentGenerationRef.current=null; updateDocumentGenerationJob(failed); setError(failed.error); return; } setConversationState((previous)=>({ ...previous, documents: previous.documents.map((item)=>item.id===job.documentId?applyAiDocumentOperation(item,{operation,text:result,sectionId:job.sectionId}):item) })); const complete={...job,status:'COMPLETE'}; documentGenerationRef.current=null; updateDocumentGenerationJob(complete); }, onError:(aiError)=>{ const failed={...job,status:'FAILED',error:aiError.message || 'AI document operation failed.'}; documentGenerationRef.current=null; updateDocumentGenerationJob(failed); setError(failed.error); } });
+    const stream = streamChatCompletion({ apiKey: apiKeyRef.current || apiKey, model, temperature, maxTokens, messages: [{ role:'system', content:effectiveSystemPrompt() }, { role:'user', content:instruction }], onDelta:(delta)=>{ if (documentGenerationRef.current?.job?.id === job.id) { result += delta; setDocumentGeneration((current) => current?.id === job.id ? { ...current, receivedCharacters: result.length } : current); } }, onDone:()=>{ const currentState = conversationStateRef.current; const currentDoc = (currentState.documents || []).find((item) => item.id === job.documentId); const targetExists = operation === 'append' || currentDoc?.sections?.some((section) => section.id === job.sectionId); if (!currentDoc || currentDoc.updatedAt !== job.baseUpdatedAt || !targetExists) { const failed={...job,status:'FAILED',error:'Document changed while AI generation was running; stale output was not applied.'}; documentGenerationRef.current=null; updateDocumentGenerationJob(failed); setError(failed.error); return; } setConversationState((previous)=>({ ...previous, documents: previous.documents.map((item)=>item.id===job.documentId?applyAiDocumentOperation(item,{operation,text:result,sectionId:job.sectionId}):item) })); const complete={...job,status:'COMPLETE'}; documentGenerationRef.current=null; updateDocumentGenerationJob(complete); }, onError:(aiError)=>{ const failed={...job,status:'FAILED',error:aiError.message || 'AI document operation failed.'}; documentGenerationRef.current=null; updateDocumentGenerationJob(failed); setError(failed.error); } });
     documentGenerationRef.current = { job, stream };
   };
   const stopDocumentGeneration = () => { const active = documentGenerationRef.current; if (!active?.job) return; try { active.stream?.cancel?.(); } catch (_) {} const cancelled={...active.job,status:'CANCELLED',error:'Stopped by user.'}; documentGenerationRef.current=null; updateDocumentGenerationJob(cancelled); };
