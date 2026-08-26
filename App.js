@@ -17,12 +17,13 @@ import ProtectedWorkspaceTools from './src/components/ProtectedWorkspaceTools';
 import AttachmentSourceSheet from './src/components/AttachmentSourceSheet';
 import PdfReviewSheet from './src/components/PdfReviewSheet';
 import VoiceReviewSheet from './src/components/VoiceReviewSheet';
+import VoiceModeSheet from './src/components/VoiceModeSheet';
 import DocumentStudio from './src/components/DocumentStudio';
 import DocumentTargetSheet from './src/components/DocumentTargetSheet';
 import AppErrorBoundary from './src/components/AppErrorBoundary';
 import { IconAlert, IconBot, IconChat, IconClose, IconDocument, IconKey, IconMic, IconSend, IconSettings, IconStop, IconUpload, IconWorkspace } from './src/components/Icons';
 import { getColors, radii, BRAND } from './src/theme';
-import { DEFAULT_SYSTEM_PROMPT, commitStateTransaction, formatProviderName, getApiKeyResult, getJSON, getLLMSettingsPin, getVersionedAppStateResult, INITIAL_MODELS, persistAndVerifyVersionedAppState, setApiKey as persistApiKey, setJSON, setLLMSettingsPin } from './src/utils/storage';
+import { DEFAULT_SYSTEM_PROMPT, commitStateTransaction, formatProviderName, getApiKeyResult, getTogetherApiKeyResult, getJSON, getLLMSettingsPin, getVersionedAppStateResult, INITIAL_MODELS, persistAndVerifyVersionedAppState, setApiKey as persistApiKey, setTogetherApiKey as persistTogetherApiKey, setJSON, setLLMSettingsPin } from './src/utils/storage';
 import { sanitizeChatsForPersistence } from './src/utils/privacy.mjs';
 import { fetchModels, streamChatCompletion } from './src/utils/streamChat';
 import { isLegacyPlainPinRecord, pinVerifierNeedsUpgrade, verifyPinAgainstRecordAsync } from './src/utils/pinVerifier.mjs';
@@ -54,11 +55,13 @@ import { localPdfAdapter } from './src/documents/localPdfAdapter';
 import { addDocumentSource, buildContextManifest, createDocumentSession, selectDocumentPages, selectDocumentSources } from './src/documents/contextManifest.mjs';
 import { loadSpeechRecognitionModule } from './src/voice/speechRecognitionAdapter.mjs';
 import { preparePlaybackAudioSession, prepareRecordingAudioSession, normaliseSpeakRate } from './src/voice/speechPlayback.mjs';
+import { VoiceModeStatus, createVoiceModeState, shouldFinalizeByVad, DEFAULT_VAD_SILENCE_MS } from './src/voice/voiceConversation.mjs';
+import { resolveProvider, DEFAULT_PROVIDER } from './src/utils/providers.mjs';
 import { normalisePinThrottle, pinThrottleRemainingMs, recordPinFailure, resetPinThrottle } from './src/security/pinThrottle.mjs';
 
 const calculateEstimatedTokens = (text = '') => Math.ceil(String(text).length / 4);
 const PIN_THROTTLE_STORAGE_KEY = 'aiConsolePinThrottle';
-const APP_RELEASE_LABEL = "Command Centre v1.5.1";
+const APP_RELEASE_LABEL = "Command Centre v1.5.2";
 
 let cachedSpeechRecognitionModule = null;
 
@@ -66,6 +69,17 @@ function AIConsoleApp() {
   const [hydrated, setHydrated] = useState(false);
   const [apiKey, setApiKeyState] = useState('');
   const apiKeyRef = useRef('');
+  const [togetherApiKey, setTogetherApiKeyState] = useState('');
+  const togetherApiKeyRef = useRef('');
+  const [llmProvider, setLlmProvider] = useState(DEFAULT_PROVIDER);
+  const llmProviderRef = useRef(DEFAULT_PROVIDER);
+  const [togetherKeyPersistenceStatus, setTogetherKeyPersistenceStatus] = useState('UNKNOWN');
+  const [voiceModeOpen, setVoiceModeOpen] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(() => createVoiceModeState());
+  const voiceModeRef = useRef(createVoiceModeState());
+  const voiceVadTimerRef = useRef(null);
+  const voiceStreamCancelRef = useRef(null);
+  const voiceLoopActiveRef = useRef(false);
   const [modelGroups, setModelGroups] = useState(INITIAL_MODELS);
   const [model, setModel] = useState('openrouter/auto');
   const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT);
@@ -172,8 +186,8 @@ function AIConsoleApp() {
     let mounted = true;
     const hydrate = async () => {
       try {
-        const [storedKeyResult, storedGroups, storedModel, storedPrompt, storedTemp, storedMaxTokens, storedChats, storedActiveId, storedMessages, storedTokens, storedMode, versionedResult, storedLocale, storedPlaybackSpeed, storedDestination, storedHaptics] = await Promise.all([
-          getApiKeyResult(), getJSON('modelGroups', INITIAL_MODELS), getJSON('activeModel', 'openrouter/auto'), getJSON('systemPrompt', DEFAULT_SYSTEM_PROMPT), getJSON('temperature', 0.2), getJSON('maxTokens', DEFAULT_OUTPUT_TOKENS), getJSON('chats', []), getJSON('activeChatId', ''), getJSON('chatHistory', []), getJSON('estimatedTokens', 0), getJSON('colorMode', 'light'), getVersionedAppStateResult(), getJSON('voiceLocale', 'en-GB'), getJSON('playbackSpeed', 1), getJSON('primaryDestination', 'chats'), getJSON('hapticsEnabled', true),
+        const [storedKeyResult, storedTogetherKeyResult, storedProvider, storedGroups, storedModel, storedPrompt, storedTemp, storedMaxTokens, storedChats, storedActiveId, storedMessages, storedTokens, storedMode, versionedResult, storedLocale, storedPlaybackSpeed, storedDestination, storedHaptics] = await Promise.all([
+          getApiKeyResult(), getTogetherApiKeyResult(), getJSON('llmProvider', DEFAULT_PROVIDER), getJSON('modelGroups', INITIAL_MODELS), getJSON('activeModel', 'openrouter/auto'), getJSON('systemPrompt', DEFAULT_SYSTEM_PROMPT), getJSON('temperature', 0.2), getJSON('maxTokens', DEFAULT_OUTPUT_TOKENS), getJSON('chats', []), getJSON('activeChatId', ''), getJSON('chatHistory', []), getJSON('estimatedTokens', 0), getJSON('colorMode', 'light'), getVersionedAppStateResult(), getJSON('voiceLocale', 'en-GB'), getJSON('playbackSpeed', 1), getJSON('primaryDestination', 'chats'), getJSON('hapticsEnabled', true),
         ]);
         const legacy = { chats: storedChats, activeChatId: storedActiveId, chatHistory: storedMessages, estimatedTokens: storedTokens };
         let state;
@@ -187,6 +201,12 @@ function AIConsoleApp() {
         setApiKeyState(storedKeyResult.value);
         apiKeyRef.current = String(storedKeyResult.value || '').trim();
         setApiKeyPersistenceStatus(storedKeyResult.ok ? 'READ_OK' : 'READ_FAILED');
+        setTogetherApiKeyState(storedTogetherKeyResult.value);
+        togetherApiKeyRef.current = String(storedTogetherKeyResult.value || '').trim();
+        setTogetherKeyPersistenceStatus(storedTogetherKeyResult.ok ? 'READ_OK' : 'READ_FAILED');
+        const nextProvider = storedProvider === 'together' ? 'together' : 'openrouter';
+        setLlmProvider(nextProvider);
+        llmProviderRef.current = nextProvider;
         setModelGroups(storedGroups && typeof storedGroups === 'object' ? storedGroups : INITIAL_MODELS);
         setModel(storedModel);
         setSystemPrompt(storedPrompt);
@@ -231,6 +251,28 @@ function AIConsoleApp() {
   useEffect(() => { if (hydrated && !hydrationDegradedRef.current) setJSON('systemPrompt', systemPrompt); }, [systemPrompt, hydrated]);
   useEffect(() => { if (hydrated && !hydrationDegradedRef.current) setJSON('temperature', temperature); }, [temperature, hydrated]);
   useEffect(() => { if (hydrated && !hydrationDegradedRef.current) setJSON('maxTokens', maxTokens); }, [maxTokens, hydrated]);
+  
+  useEffect(() => {
+    if (!hydrated) return;
+    togetherApiKeyRef.current = String(togetherApiKey || '').trim();
+    persistTogetherApiKey(togetherApiKey).then((result) => {
+      setTogetherKeyPersistenceStatus(result.status || (result.ok ? 'SAVED_SECURELY' : 'SESSION_ONLY'));
+    }).catch(() => setTogetherKeyPersistenceStatus('SESSION_ONLY'));
+  }, [togetherApiKey, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    llmProviderRef.current = llmProvider === 'together' ? 'together' : 'openrouter';
+    setJSON('llmProvider', llmProviderRef.current);
+  }, [llmProvider, hydrated]);
+
+  const activeProviderKey = () => {
+    const p = llmProviderRef.current || llmProvider;
+    return p === 'together'
+      ? (togetherApiKeyRef.current || togetherApiKey || '')
+      : (apiKeyRef.current || apiKey || '');
+  };
+
   useEffect(() => { if (hydrated && !hydrationDegradedRef.current) setJSON('colorMode', colorMode); }, [colorMode, hydrated]);
   useEffect(() => { if (hydrated && !hydrationDegradedRef.current) setJSON('voiceLocale', voiceLocale); }, [voiceLocale, hydrated]);
   useEffect(() => { if (hydrated && !hydrationDegradedRef.current) setJSON('playbackSpeed', playbackSpeed); }, [playbackSpeed, hydrated]);
@@ -277,9 +319,9 @@ function AIConsoleApp() {
       const speechRecognition = loaded.module;
       cachedSpeechRecognitionModule = speechRecognition;
       try {
-        resultSubscription = speechRecognition.addListener('result', (event) => { const transcript = event.results?.[0]?.transcript; if (transcript) { voiceDraftRef.current = transcript; setVoiceDraft(transcript); } });
+        resultSubscription = speechRecognition.addListener('result', (event) => { const transcript = event.results?.[0]?.transcript; if (transcript) { voiceDraftRef.current = transcript; setVoiceDraft(transcript); } try { voiceResultHandlerRef.current?.(event); } catch (_) {} });
         errorSubscription = speechRecognition.addListener('error', (event) => { if (event.error !== 'aborted' && event.error !== 'no-speech') setError(event.message || 'Speech recognition is unavailable. Typing remains available.'); setIsListening(false); });
-        endSubscription = speechRecognition.addListener('end', () => { setIsListening(false); if (voiceDraftRef.current.trim()) setVoiceReviewOpen(true); });
+        endSubscription = speechRecognition.addListener('end', () => { setIsListening(false); if (voiceLoopActiveRef.current) { const text = (voiceModeRef.current.transcript || voiceModeRef.current.interim || voiceDraftRef.current || '').trim(); if (text) { try { voiceResultHandlerRef.current?.({ results: [{ transcript: text, isFinal: true }], isFinal: true }); } catch (_) {} } return; } if (voiceDraftRef.current.trim()) setVoiceReviewOpen(true); });
       } catch (_) { cachedSpeechRecognitionModule = null; setError('Speech recognition is unavailable in this build. Typing remains available.'); }
     });
     return () => { disposed = true; try { resultSubscription?.remove?.(); } catch (_) {} try { errorSubscription?.remove?.(); } catch (_) {} try { endSubscription?.remove?.(); } catch (_) {} try { cachedSpeechRecognitionModule?.abort?.(); } catch (_) {} };
@@ -391,7 +433,7 @@ function AIConsoleApp() {
     generationManagerRef.current.start({ chatId, targetMessageId, streamFactory: (callbacks) => {
       const requestId = `request-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       const isCurrentRequest = () => streamRefs.current.get(chatId)?.requestId === requestId;
-      const stream = streamChatCompletion({ apiKey: apiKeyRef.current || apiKey, model, messages: apiMessages, temperature, maxTokens, onDelta: (delta) => { if (isCurrentRequest()) { response += delta; callbacks.onDelta(delta); } }, onDone: () => { if (isCurrentRequest()) callbacks.onDone(); }, onError: (streamError) => { if (isCurrentRequest()) { setError(`API Error: ${streamError.message}`); callbacks.onError(streamError); } } });
+      const stream = streamChatCompletion({ apiKey: activeProviderKey(), provider: llmProviderRef.current || llmProvider, model, messages: apiMessages, temperature, maxTokens, onDelta: (delta) => { if (isCurrentRequest()) { response += delta; callbacks.onDelta(delta); } }, onDone: () => { if (isCurrentRequest()) callbacks.onDone(); }, onError: (streamError) => { if (isCurrentRequest()) { setError(`API Error: ${streamError.message}`); callbacks.onError(streamError); } } });
       streamRefs.current.set(chatId, { requestId, stream });
       return stream;
     } });
@@ -413,7 +455,7 @@ function AIConsoleApp() {
       setError(files.length ? 'Draft queued. Attachment metadata is retained, but files must be reattached before sending after restart.' : 'Draft queued for delivery when online.');
       return;
     }
-    if (!(apiKeyRef.current || apiKey).trim()) { setError('No API key loaded. Open the key icon, paste your OpenRouter key (sk-or-v1-...), and wait for “Saved securely”.'); requestProtectedSettingsAccess(); return; }
+    if (!String(activeProviderKey() || '').trim()) { setError('No API key for the active provider. Open protected settings and paste OpenRouter or Together.ai key.'); requestProtectedSettingsAccess(); return; }
     const textParts=[]; const imageParts=[];
     for (const file of files) {
       const context=attachmentExtractsRef.current.get(file.id);
@@ -434,7 +476,7 @@ function AIConsoleApp() {
     const request=buildProviderRequest(nextChat,target.messageId); setPendingPromptContext(null); startGeneration(activeChat.id,target.messageId,request);
   };
   const handleRegenerate = (message) => { if (!activeChat || isLoading || !apiKey.trim()) return; try { const next=regenerateAssistant(conversationState,activeChat.id,message.messageId); const nextChat=next.chats.find(c=>c.id===activeChat.id),target=nextChat.messages.at(-1); setConversationState(next); startGeneration(activeChat.id,target.messageId,buildProviderRequest(nextChat,target.messageId,null)); } catch(e){setError(e.message);} };
-  const handleRetryGeneration = (message) => { if (!activeChat || !apiKey.trim()) return; const prior=generationRequestsRef.current.get(activeChat.id); if(!prior||prior.targetMessageId!==message.messageId){setError('No failed or cancelled request is available to retry for this response.');return;} setConversationState(previous=>updateMessageContent(previous,activeChat.id,message.messageId,'')); try { generationManagerRef.current.retry(activeChat.id,(callbacks)=>{const requestId=`retry-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;const isCurrentRequest=()=>streamRefs.current.get(activeChat.id)?.requestId===requestId;const stream=streamChatCompletion({apiKey: apiKeyRef.current || apiKey,model,messages:prior.apiMessages,temperature,maxTokens,onDelta:(delta)=>{if(isCurrentRequest())callbacks.onDelta(delta);},onDone:()=>{if(isCurrentRequest())callbacks.onDone();},onError:(e)=>{if(isCurrentRequest())callbacks.onError(e);}});streamRefs.current.set(activeChat.id,{requestId,stream});return stream;}); }catch(e){setError(e.message||'Retry failed.');} };
+  const handleRetryGeneration = (message) => { if (!activeChat || !apiKey.trim()) return; const prior=generationRequestsRef.current.get(activeChat.id); if(!prior||prior.targetMessageId!==message.messageId){setError('No failed or cancelled request is available to retry for this response.');return;} setConversationState(previous=>updateMessageContent(previous,activeChat.id,message.messageId,'')); try { generationManagerRef.current.retry(activeChat.id,(callbacks)=>{const requestId=`retry-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;const isCurrentRequest=()=>streamRefs.current.get(activeChat.id)?.requestId===requestId;const stream=streamChatCompletion({apiKey: activeProviderKey(),provider: llmProviderRef.current || llmProvider,model,messages:prior.apiMessages,temperature,maxTokens,onDelta:(delta)=>{if(isCurrentRequest())callbacks.onDelta(delta);},onDone:()=>{if(isCurrentRequest())callbacks.onDone();},onError:(e)=>{if(isCurrentRequest())callbacks.onError(e);}});streamRefs.current.set(activeChat.id,{requestId,stream});return stream;}); }catch(e){setError(e.message||'Retry failed.');} };
   const dispatchQueuedTurn = (turn) => { if (offlineMode || !apiKey.trim() || !turn || turn.status!==QueueStatus.QUEUED) return; if (turn.providerContextRequired) { setConversationState(previous=>({...previous,offlineQueue:markFailed(markSending(previous.offlineQueue,turn.id),turn.id,'Attachments must be reattached before this queued draft can be sent.')})); return; } const current=conversationStateRef.current,chat=current.chats.find(c=>c.id===turn.chatId); if(!chat){setConversationState(previous=>({...previous,offlineQueue:markFailed(markSending(previous.offlineQueue,turn.id),turn.id,'Destination chat no longer exists.')}));return;} let next={...current,offlineQueue:markSending(current.offlineQueue,turn.id)}; next=appendTurn(next,chat.id,{role:'user',content:turn.content,apiContent:turn.content}); const nextChat=next.chats.find(c=>c.id===chat.id),target=nextChat.messages.at(-1); conversationStateRef.current=next;setConversationState(next);startGeneration(chat.id,target.messageId,buildProviderRequest(nextChat,target.messageId,null),{queueId:turn.id}); };
   const retryQueuedTurn=(id)=>setConversationState(previous=>({...previous,offlineQueue:retryTurn(previous.offlineQueue,id)}));
   const cancelQueuedTurn=(id)=>setConversationState(previous=>({...previous,offlineQueue:cancelTurn(previous.offlineQueue,id)}));
@@ -450,7 +492,7 @@ function AIConsoleApp() {
   const handleImport = async () => { try { const picked = await DocumentPicker.getDocumentAsync({ type: 'application/json', copyToCacheDirectory: true }); if (picked.canceled) return; const raw = await FileSystem.readAsStringAsync(picked.assets[0].uri); const chat = parseChatImport(raw); chat.id = createChat().id; chat.workspaceId = conversationState.activeWorkspaceId; const current = conversationStateRef.current; const candidate = normaliseCState({ ...current, chats: [chat, ...current.chats], activeChatId: chat.id, workspaces: current.workspaces.map((workspace) => workspace.id === chat.workspaceId ? { ...workspace, chatIds: [...workspace.chatIds, chat.id], updatedAt: Date.now() } : workspace) }); await commitCandidateState(candidate); setError('Chat import committed after durable read-back verification.'); } catch (importError) { setError(importError.message || 'Unable to import this chat export. Existing data was retained where rollback verified.'); } };
   const handleBackup = async () => { try { const backup = createOrdinaryBackup(conversationState); const uri = `${FileSystem.cacheDirectory}AI_Console_Backup_${Date.now()}.json`; await FileSystem.writeAsStringAsync(uri, JSON.stringify(backup, null, 2), { encoding: FileSystem.EncodingType.UTF8 }); if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(uri, { mimeType: 'application/json' }); else setError(`Backup saved to ${uri}`); } catch (backupError) { setError(backupError.message || 'Unable to create validated ordinary backup.'); } };
   const handleRestore = async () => { try { const picked = await DocumentPicker.getDocumentAsync({ type: 'application/json', copyToCacheDirectory: true }); if (picked.canceled) return; const raw = await FileSystem.readAsStringAsync(picked.assets[0].uri); const backup = JSON.parse(raw); const preview = previewRestore(conversationStateRef.current, backup); const prepared = prepareAtomicRestore(conversationStateRef.current, backup); if (prepared.error) throw new Error(prepared.error); Alert.alert('Restore backup?', `Current: ${preview.currentChats} chats, ${preview.currentWorkspaces} workspaces, ${preview.currentDocuments} documents. Incoming: ${preview.incomingChats} chats, ${preview.incomingWorkspaces} workspaces, ${preview.incomingDocuments} documents.`, [{ text: 'Cancel', style: 'cancel' }, { text: 'Restore', style: 'destructive', onPress: () => { void commitCandidateState(prepared.nextState).then(() => setError('Backup durably restored and read-back verified.')).catch((restoreError) => setError(restoreError.message || 'Backup restore failed; rollback was attempted.')); } }]); } catch (restoreError) { setError(restoreError.message || 'Backup restore validation failed.'); } };
-  const handleSyncModels = async () => { if (isFetchingModels) return; setIsFetchingModels(true); try { const data = await fetchModels(apiKey); const grouped = {}; (data.data || []).forEach((item) => { const provider = formatProviderName(item.id.split('/')[0]); (grouped[provider] ||= []).push({ id: item.id, name: item.name }); }); Object.keys(grouped).forEach((key) => grouped[key].sort((a, b) => a.name.localeCompare(b.name))); if (Object.keys(grouped).length) setModelGroups(grouped); else setError('OpenRouter returned an empty model list.'); } catch (syncError) { setError(syncError.message || 'Unable to sync models from OpenRouter.'); } finally { setIsFetchingModels(false); } };
+  const handleSyncModels = async () => { if (isFetchingModels) return; setIsFetchingModels(true); try { const data = await fetchModels(activeProviderKey(), llmProviderRef.current || llmProvider); const grouped = {}; (data.data || []).forEach((item) => { const provider = formatProviderName(item.id.split('/')[0]); (grouped[provider] ||= []).push({ id: item.id, name: item.name }); }); Object.keys(grouped).forEach((key) => grouped[key].sort((a, b) => a.name.localeCompare(b.name))); if (Object.keys(grouped).length) setModelGroups(grouped); else setError('OpenRouter returned an empty model list.'); } catch (syncError) { setError(syncError.message || 'Unable to sync models from OpenRouter.'); } finally { setIsFetchingModels(false); } };
   const handlePickFile = async () => { if (isLoading) return; try { const selected = await pickAndExtractFile(); if (!selected) return; const file = createAttachment({ name: selected.attachment?.name, uri: selected.attachment?.uri || selected.pdfAsset?.uri || null, size: selected.attachment?.size, kind: selected.attachment?.kind || 'document', mimeType: selected.attachment?.type || selected.pdfAsset?.mimeType || '', source: 'document' }); if (selected.pdfAsset) { setAttachmentSession((previous) => addAttachment(previous, { ...file, status: 'PROCESSING' })); const job = await processPdf({ file: { ...selected.pdfAsset, name: file.name, uri: file.uri }, adapter: localPdfAdapter }); if (job.status !== 'READY') { setAttachmentSession((previous) => updateAttachmentStatus(previous, file.id, 'FAILED', job.error)); throw new Error(job.error || 'PDF text extraction failed.'); } setPdfReview({ attachmentId: file.id, job }); setPdfSelectedPages(job.pages.map((page) => page.pageNumber)); return; } attachmentExtractsRef.current.set(file.id, selected.context || ''); setAttachmentSession((previous) => addAttachment(previous, { ...file, status: 'READY' })); } catch (uploadError) { setError(uploadError.message || 'Unable to prepare this file.'); } };
   const addImageAttachment = async (asset) => { if (!asset) return; const dataUrl = await loadImageDataUrl(asset); const file = createAttachment(asset); attachmentExtractsRef.current.set(file.id, { type: 'image_url', image_url: { url: dataUrl } }); setAttachmentSession((previous) => addAttachment(previous, { ...file, status: 'READY' })); };
   const handleAddCamera = async () => { try { await addImageAttachment(await captureCameraImage()); } catch (cameraError) { setError(cameraError.message || 'Unable to use the camera.'); } };
@@ -576,18 +618,250 @@ function AIConsoleApp() {
     setConversationState((previous) => ({ ...previous, documentGenerationJobs: [...(previous.documentGenerationJobs || []).filter((item) => item.id !== job.id && item.documentId !== job.documentId), { id: job.id, documentId: job.documentId, sectionId: job.sectionId || null, operation: job.operation, status: job.status, createdAt: job.createdAt, updatedAt: Date.now(), error: job.error || null }] }));
   };
   const handleAiDocumentOperation = (operation, doc, sectionId = null) => {
-    if (!(apiKeyRef.current || apiKey).trim()) { setError('No API key loaded. Open the key icon, paste your OpenRouter key (sk-or-v1-...), and wait for “Saved securely”.'); requestProtectedSettingsAccess(); return; }
+    if (!String(activeProviderKey() || '').trim()) { setError('No API key for the active provider. Open protected settings and paste OpenRouter or Together.ai key.'); requestProtectedSettingsAccess(); return; }
     if (!doc || (operation !== 'append' && !sectionId)) { setError(`Choose a target section before AI ${operation}.`); return; }
     if (documentGenerationRef.current?.stream && documentGenerationRef.current?.job?.status === 'STREAMING') { setError('A document generation is already active. Stop it before starting another.'); return; }
     const job = { id: `docjob-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, documentId: doc.id, sectionId, operation, status: 'STREAMING', createdAt: Date.now(), baseUpdatedAt: doc.updatedAt, error: null };
     updateDocumentGenerationJob(job);
     let result = '';
     const instruction = `Perform a ${operation} document operation. Return only the replacement or inserted document text.\n\nVisible document:\n${renderDocumentText(doc)}`;
-    const stream = streamChatCompletion({ apiKey: apiKeyRef.current || apiKey, model, temperature, maxTokens, messages: [{ role:'system', content:effectiveSystemPrompt() }, { role:'user', content:instruction }], onDelta:(delta)=>{ if (documentGenerationRef.current?.job?.id === job.id) { result += delta; setDocumentGeneration((current) => current?.id === job.id ? { ...current, receivedCharacters: result.length } : current); } }, onDone:()=>{ const currentState = conversationStateRef.current; const currentDoc = (currentState.documents || []).find((item) => item.id === job.documentId); const targetExists = operation === 'append' || currentDoc?.sections?.some((section) => section.id === job.sectionId); if (!currentDoc || currentDoc.updatedAt !== job.baseUpdatedAt || !targetExists) { const failed={...job,status:'FAILED',error:'Document changed while AI generation was running; stale output was not applied.'}; documentGenerationRef.current=null; updateDocumentGenerationJob(failed); setError(failed.error); return; } setConversationState((previous)=>({ ...previous, documents: previous.documents.map((item)=>item.id===job.documentId?applyAiDocumentOperation(item,{operation,text:result,sectionId:job.sectionId}):item) })); const complete={...job,status:'COMPLETE'}; documentGenerationRef.current=null; updateDocumentGenerationJob(complete); }, onError:(aiError)=>{ const failed={...job,status:'FAILED',error:aiError.message || 'AI document operation failed.'}; documentGenerationRef.current=null; updateDocumentGenerationJob(failed); setError(failed.error); } });
+    const stream = streamChatCompletion({ apiKey: activeProviderKey(), provider: llmProviderRef.current || llmProvider, model, temperature, maxTokens, messages: [{ role:'system', content:effectiveSystemPrompt() }, { role:'user', content:instruction }], onDelta:(delta)=>{ if (documentGenerationRef.current?.job?.id === job.id) { result += delta; setDocumentGeneration((current) => current?.id === job.id ? { ...current, receivedCharacters: result.length } : current); } }, onDone:()=>{ const currentState = conversationStateRef.current; const currentDoc = (currentState.documents || []).find((item) => item.id === job.documentId); const targetExists = operation === 'append' || currentDoc?.sections?.some((section) => section.id === job.sectionId); if (!currentDoc || currentDoc.updatedAt !== job.baseUpdatedAt || !targetExists) { const failed={...job,status:'FAILED',error:'Document changed while AI generation was running; stale output was not applied.'}; documentGenerationRef.current=null; updateDocumentGenerationJob(failed); setError(failed.error); return; } setConversationState((previous)=>({ ...previous, documents: previous.documents.map((item)=>item.id===job.documentId?applyAiDocumentOperation(item,{operation,text:result,sectionId:job.sectionId}):item) })); const complete={...job,status:'COMPLETE'}; documentGenerationRef.current=null; updateDocumentGenerationJob(complete); }, onError:(aiError)=>{ const failed={...job,status:'FAILED',error:aiError.message || 'AI document operation failed.'}; documentGenerationRef.current=null; updateDocumentGenerationJob(failed); setError(failed.error); } });
     documentGenerationRef.current = { job, stream };
   };
   const stopDocumentGeneration = () => { const active = documentGenerationRef.current; if (!active?.job) return; try { active.stream?.cancel?.(); } catch (_) {} const cancelled={...active.job,status:'CANCELLED',error:'Stopped by user.'}; documentGenerationRef.current=null; updateDocumentGenerationJob(cancelled); };
   const retryDocumentGeneration = () => { const job = documentGeneration || (conversationState.documentGenerationJobs || []).find((item) => item.documentId === activeDocument?.id && ['FAILED','CANCELLED'].includes(item.status)); if (!job) return; const doc=(conversationStateRef.current.documents || []).find((item)=>item.id===job.documentId); if (!doc) { setError('The document for this generation no longer exists.'); return; } handleAiDocumentOperation(job.operation, doc, job.sectionId); };
+
+
+  const clearVoiceVadTimer = () => {
+    if (voiceVadTimerRef.current) {
+      clearTimeout(voiceVadTimerRef.current);
+      voiceVadTimerRef.current = null;
+    }
+  };
+
+  const patchVoiceMode = (patch) => {
+    setVoiceMode((prev) => {
+      const next = { ...prev, ...patch };
+      voiceModeRef.current = next;
+      return next;
+    });
+  };
+
+  const stopVoiceRecognition = async () => {
+    clearVoiceVadTimer();
+    try { cachedSpeechRecognitionModule?.stop?.(); } catch (_) {}
+    try { cachedSpeechRecognitionModule?.abort?.(); } catch (_) {}
+    setIsListening(false);
+    try { await preparePlaybackAudioSession(); } catch (_) {}
+  };
+
+  const finalizeVoiceUtterance = async (rawText) => {
+    if (voiceModeRef.current.status !== VoiceModeStatus.LISTENING) return;
+    const text = String(rawText || voiceModeRef.current.transcript || '').trim();
+    clearVoiceVadTimer();
+    patchVoiceMode({ status: VoiceModeStatus.THINKING, interim: '' });
+    await stopVoiceRecognition();
+    if (!voiceLoopActiveRef.current) return;
+    if (!text) {
+      patchVoiceMode({ status: VoiceModeStatus.LISTENING, interim: '', error: null });
+      // re-arm listen
+      setTimeout(() => { if (voiceLoopActiveRef.current) startVoiceListening(); }, 250);
+      return;
+    }
+    await runVoiceTurn(text);
+  };
+
+  const runVoiceTurn = async (userText) => {
+    if (!activeChat) {
+      patchVoiceMode({ status: VoiceModeStatus.ERROR, error: 'Open or create a chat channel first.' });
+      return;
+    }
+    const key = String(activeProviderKey() || '').trim();
+    if (!key) {
+      patchVoiceMode({ status: VoiceModeStatus.ERROR, error: 'No API key for the active provider.' });
+      requestProtectedSettingsAccess();
+      return;
+    }
+    patchVoiceMode({ status: VoiceModeStatus.THINKING, transcript: userText, interim: '', reply: '', error: null });
+
+    // Persist user + empty assistant into chat for continuity
+    let next = appendTurn(conversationStateRef.current, activeChat.id, { role: 'user', content: userText, apiContent: userText });
+    const userChat = next.chats.find((c) => c.id === activeChat.id);
+    next = appendTurn(next, activeChat.id, { role: 'assistant', content: '' });
+    const asstChat = next.chats.find((c) => c.id === activeChat.id);
+    const target = asstChat.messages.at(-1);
+    conversationStateRef.current = next;
+    setConversationState(next);
+
+    const apiMessages = buildProviderRequest(asstChat, target.messageId, null);
+    let reply = '';
+    const stream = streamChatCompletion({
+      apiKey: key,
+      provider: llmProviderRef.current || llmProvider,
+      model,
+      messages: apiMessages,
+      temperature,
+      maxTokens,
+      onDelta: (delta) => {
+        reply += delta;
+        patchVoiceMode({ reply });
+        setConversationState((prev) => updateMessageContent(prev, activeChat.id, target.messageId, reply));
+      },
+      onDone: async () => {
+        voiceStreamCancelRef.current = null;
+        if (!voiceLoopActiveRef.current) return;
+        const finalText = reply.trim() || 'I did not catch a response.';
+        patchVoiceMode({ status: VoiceModeStatus.SPEAKING, reply: finalText });
+        try {
+          await Speech.stop();
+          await preparePlaybackAudioSession();
+          const rate = normaliseSpeakRate(playbackSpeed, Platform.OS);
+          Speech.speak(finalText, {
+            language: voiceLocale || 'en-GB',
+            rate,
+            onDone: () => {
+              if (!voiceLoopActiveRef.current) return;
+              setIsSpeaking(false);
+              // VAD loop: listen again
+              setTimeout(() => { if (voiceLoopActiveRef.current) startVoiceListening(); }, 300);
+            },
+            onStopped: () => setIsSpeaking(false),
+            onError: () => {
+              setIsSpeaking(false);
+              patchVoiceMode({ status: VoiceModeStatus.ERROR, error: 'TTS failed — check media volume.' });
+            },
+          });
+          setIsSpeaking(true);
+        } catch (_) {
+          patchVoiceMode({ status: VoiceModeStatus.ERROR, error: 'TTS failed on this device.' });
+        }
+      },
+      onError: (err) => {
+        voiceStreamCancelRef.current = null;
+        patchVoiceMode({ status: VoiceModeStatus.ERROR, error: err?.message || 'Provider request failed.' });
+      },
+    });
+    voiceStreamCancelRef.current = stream;
+  };
+
+  const startVoiceListening = async () => {
+    if (!voiceLoopActiveRef.current) return;
+    const speechRecognition = cachedSpeechRecognitionModule;
+    if (!speechRecognition || typeof speechRecognition.start !== 'function') {
+      patchVoiceMode({ status: VoiceModeStatus.ERROR, error: 'Speech recognition unavailable in this build.' });
+      return;
+    }
+    try {
+      const permission = await speechRecognition.requestPermissionsAsync();
+      if (!permission.granted) {
+        patchVoiceMode({ status: VoiceModeStatus.ERROR, error: 'Microphone permission required for Voice Mode.' });
+        return;
+      }
+      await prepareRecordingAudioSession();
+      clearVoiceVadTimer();
+      const startedAt = Date.now();
+      patchVoiceMode({
+        status: VoiceModeStatus.LISTENING,
+        transcript: '',
+        interim: '',
+        reply: voiceModeRef.current.reply || '',
+        error: null,
+        listeningStartedAt: startedAt,
+        lastSpeechAt: 0,
+      });
+      setIsListening(true);
+      speechRecognition.start({
+        lang: voiceLocale || 'en-GB',
+        interimResults: true,
+        addsPunctuation: true,
+        continuous: true,
+      });
+    } catch (_) {
+      patchVoiceMode({ status: VoiceModeStatus.ERROR, error: 'Could not start listening.' });
+      setIsListening(false);
+    }
+  };
+
+  const handleVoiceModeResult = (event) => {
+    if (!voiceLoopActiveRef.current) return;
+    if (voiceModeRef.current.status !== VoiceModeStatus.LISTENING) return;
+    const transcript = event?.results?.[0]?.transcript || '';
+    const isFinal = Boolean(event?.isFinal || event?.results?.[0]?.isFinal);
+    if (!transcript) return;
+    const now = Date.now();
+    if (isFinal) {
+      patchVoiceMode({ transcript, interim: '', lastSpeechAt: now });
+      // still wait brief silence in continuous mode, or finalize immediately if isFinal and continuous false
+      clearVoiceVadTimer();
+      voiceVadTimerRef.current = setTimeout(() => {
+        finalizeVoiceUtterance(transcript);
+      }, DEFAULT_VAD_SILENCE_MS);
+      return;
+    }
+    patchVoiceMode({ interim: transcript, lastSpeechAt: now });
+    clearVoiceVadTimer();
+    voiceVadTimerRef.current = setTimeout(() => {
+      const latest = (voiceModeRef.current.transcript || voiceModeRef.current.interim || '').trim();
+      if (shouldFinalizeByVad({
+        now: Date.now(),
+        lastSpeechAt: voiceModeRef.current.lastSpeechAt,
+        listeningStartedAt: voiceModeRef.current.listeningStartedAt,
+        hasTranscript: Boolean(latest),
+      })) {
+        finalizeVoiceUtterance(latest);
+      }
+    }, DEFAULT_VAD_SILENCE_MS);
+  };
+
+  const openVoiceMode = async () => {
+    if (!activeChat) {
+      setError('Create or open a chat before starting Voice Mode.');
+      return;
+    }
+    if (!String(activeProviderKey() || '').trim()) {
+      setError('Set an API key for the active provider first.');
+      requestProtectedSettingsAccess();
+      return;
+    }
+    voiceLoopActiveRef.current = true;
+    setVoiceModeOpen(true);
+    patchVoiceMode(createVoiceModeState({ status: VoiceModeStatus.IDLE }));
+    setTimeout(() => startVoiceListening(), 350);
+  };
+
+  const closeVoiceMode = async () => {
+    voiceLoopActiveRef.current = false;
+    clearVoiceVadTimer();
+    try { voiceStreamCancelRef.current?.cancel?.(); } catch (_) {}
+    voiceStreamCancelRef.current = null;
+    try { await Speech.stop(); } catch (_) {}
+    await stopVoiceRecognition();
+    setIsSpeaking(false);
+    setVoiceModeOpen(false);
+    patchVoiceMode(createVoiceModeState());
+  };
+
+  const interruptVoiceMode = async () => {
+    try { voiceStreamCancelRef.current?.cancel?.(); } catch (_) {}
+    voiceStreamCancelRef.current = null;
+    try { await Speech.stop(); } catch (_) {}
+    setIsSpeaking(false);
+    await stopVoiceRecognition();
+    if (voiceLoopActiveRef.current) startVoiceListening();
+  };
+
+  const toggleVoiceModeListen = async () => {
+    if (voiceModeRef.current.status === VoiceModeStatus.LISTENING) {
+      const text = (voiceModeRef.current.transcript || voiceModeRef.current.interim || '').trim();
+      if (text) await finalizeVoiceUtterance(text);
+      else await stopVoiceRecognition();
+      return;
+    }
+    voiceLoopActiveRef.current = true;
+    await startVoiceListening();
+  };
+  voiceResultHandlerRef.current = handleVoiceModeResult;
+
 
   const startSpeechRecognition = async () => { const speechRecognition = cachedSpeechRecognitionModule; if (!speechRecognition || typeof speechRecognition.requestPermissionsAsync !== 'function' || typeof speechRecognition.start !== 'function') { setError('Speech recognition is unavailable in this build. Text input remains available.'); setIsListening(false); return; } try { const permission = await speechRecognition.requestPermissionsAsync(); if (!permission.granted) { setError('Microphone permission is required for speech-to-text.'); return; } await prepareRecordingAudioSession(); voiceDraftRef.current = ''; setVoiceDraft(''); setVoiceReviewOpen(false); const speechOptions = { lang: 'en-GB', interimResults: true, addsPunctuation: true, continuous: true }; speechOptions.lang = voiceLocale || speechOptions.lang; speechRecognition.start(speechOptions); setIsListening(true); } catch (_) { setError('Speech recognition is unavailable on this device. Text input remains available.'); setIsListening(false); } };
   const toggleSpeechRecognition = async () => { const speechRecognition = cachedSpeechRecognitionModule; if (isListening) { try { speechRecognition?.stop?.(); } catch (_) { setError('Speech recognition could not be stopped cleanly.'); } setIsListening(false); try { await preparePlaybackAudioSession(); } catch (_) {} return; } await startSpeechRecognition(); };
@@ -604,7 +878,7 @@ function AIConsoleApp() {
       {layout !== 'compact' && <PrimaryNavigation items={navigationItems} active={primaryDestination} onSelect={(id) => { triggerHaptic(hapticsEnabled); requestPrimaryDestination(id); }} palette={palette} vertical />}
       <View style={styles.destinationArea}>
       {primaryDestination === 'chats' && <><View style={styles.conversationArea}>{activeBranches.length > 1 && <View style={styles.branchBar} accessibilityLabel="Conversation branches"><Text style={styles.branchLabel}>Branch</Text>{activeBranches.map((id,index)=><TouchableOpacity key={id} style={[styles.branchChip,activeChat?.activeBranchId===id&&styles.branchChipActive]} onPress={()=>setConversationState((previous)=>setActiveBranch(previous,activeChat.id,id))} accessibilityRole="button" accessibilityState={{selected:activeChat?.activeBranchId===id}}><Text style={styles.branchChipText}>{index===0?'Main':`Branch ${index}`}</Text></TouchableOpacity>)}</View>}{bookmarkViewerOpen && <View style={styles.bookmarkPanel}><View style={styles.bookmarkHeader}><Text style={styles.branchLabel}>Bookmarks</Text><TouchableOpacity style={styles.miniAction} onPress={()=>setBookmarkViewerOpen(false)} accessibilityRole="button"><Text style={styles.miniActionText}>Close</Text></TouchableOpacity></View>{(activeChat?.bookmarks||[]).length===0?<Text style={styles.queueText}>No bookmarks in this chat.</Text>:(activeChat.bookmarks||[]).map((id)=>{const item=activeChat.messages.find((message)=>message.messageId===id);return item?<Text key={id} style={styles.queueText} numberOfLines={3}>{item.role}: {item.content}</Text>:null;})}</View>}{messages.length === 0 ? <View style={styles.emptyState}><View style={styles.emptyIcon}><IconBot color={palette.cyanBright} /></View><Text style={styles.emptyEyebrow}>COMMAND CENTRE</Text><Text style={styles.emptyTitle}>Command Centre Ready</Text><Text style={styles.emptySubtitle}>Issue orders, run document ops, or stage local intelligence. Your workspace stays on this device.</Text><TouchableOpacity style={styles.emptyBtn} onPress={handleCreateChat} accessibilityRole="button"><Text style={styles.emptyBtnText}>Open Channel</Text></TouchableOpacity></View> : <FlatList ref={listRef} data={messages} keyExtractor={(item) => item.messageId} renderItem={({ item }) => <MessageBubble message={item} isStreamingEmpty={isLoading && item.messageId === activeGeneration?.targetMessageId && !item.content} retryAvailable={['FAILED','CANCELLED'].includes(activeGeneration?.status) && activeGeneration?.targetMessageId === item.messageId} palette={palette} onRetry={() => handleRetryGeneration(item)} onRegenerate={() => handleRegenerate(item)} onDownload={() => handleExport('md', [item])} onShare={() => handleExport('txt', [item])} onContinue={() => setInput('Continue the previous response.')} onBranch={() => { if (item.role === 'assistant') handleRegenerate(item); else { setInput(item.content); setEditSourceMessageId(item.messageId); } }} onBookmark={() => updateChat(activeChat.id, (chat) => ({ ...chat, bookmarks: Array.from(new Set([...(chat.bookmarks || []), item.messageId])) }))} onQuote={() => setInput(`> ${item.content}\n\n`)} onEdit={() => { setInput(item.content); setEditSourceMessageId(item.messageId); }} onResubmit={() => { setInput(item.content); setEditSourceMessageId(item.messageId); }} onSpeak={() => handleSpeakMessage(item)} onAddToDocument={() => handleAddMessageToDocument(item)} onDelete={() => Alert.alert('Delete message?', 'Delete this message and all descendant branch messages?', [{text:'Cancel',style:'cancel'},{text:'Delete',style:'destructive',onPress:()=>setConversationState((previous)=>removeMessage(previous,activeChat.id,item.messageId))}])} />} contentContainerStyle={styles.messageList} onScroll={(event)=>{const {contentOffset,contentSize,layoutMeasurement}=event.nativeEvent;isNearBottomRef.current=(contentSize.height-layoutMeasurement.height-contentOffset.y)<96;}} scrollEventThrottle={100} onContentSizeChange={()=>{if(isNearBottomRef.current)scrollToBottom();}} />}</View>
-      <View style={styles.composerAvoider}><View style={styles.inputArea}><View style={styles.composerMetaRow}>{(activeChat?.bookmarks||[]).length>0&&<TouchableOpacity style={styles.miniAction} onPress={()=>setBookmarkViewerOpen((value)=>!value)} accessibilityRole="button"><Text style={styles.miniActionText}>{(activeChat.bookmarks||[]).length} bookmarks</Text></TouchableOpacity>}{pendingPromptContext&&<View style={styles.promptStage}><Text style={styles.promptStageText}>{pendingPromptContext.role}: {pendingPromptContext.name}</Text><TouchableOpacity onPress={()=>setPendingPromptContext(null)} style={styles.miniAction} accessibilityRole="button"><Text style={styles.miniActionText}>Clear</Text></TouchableOpacity></View>}</View>{activeQueuedTurns.map((turn)=><View key={turn.id} style={styles.queueRow}><View style={styles.queueBody}><Text style={styles.queueTitle}>{turn.status} draft</Text><Text style={styles.queueText} numberOfLines={2}>{turn.content || (turn.attachments||[]).map((file)=>file.name).join(', ') || 'Attachment draft'}</Text>{turn.error&&<Text style={styles.queueError}>{turn.error}</Text>}</View>{['FAILED','CANCELLED'].includes(turn.status)&&<TouchableOpacity style={styles.miniAction} onPress={()=>retryQueuedTurn(turn.id)} accessibilityRole="button"><Text style={styles.miniActionText}>Retry</Text></TouchableOpacity>}{!['SENT','CANCELLED'].includes(turn.status)&&<TouchableOpacity style={styles.miniAction} onPress={()=>cancelQueuedTurn(turn.id)} accessibilityRole="button"><Text style={styles.miniActionText}>Cancel</Text></TouchableOpacity>}</View>)}{attachmentSession.files.map((file) => <View key={file.id} style={styles.attachmentChip}><Text style={styles.attachmentText} numberOfLines={1}>{file.kind}: {file.name} · {file.status.toLowerCase()}</Text><TouchableOpacity style={styles.attachmentMove} onPress={() => handleMoveAttachment(file.id, -1)} accessibilityRole="button" accessibilityLabel={`Move ${file.name} earlier`}><Text style={styles.attachmentMoveText}>↑</Text></TouchableOpacity><TouchableOpacity style={styles.attachmentMove} onPress={() => handleMoveAttachment(file.id, 1)} accessibilityRole="button" accessibilityLabel={`Move ${file.name} later`}><Text style={styles.attachmentMoveText}>↓</Text></TouchableOpacity><TouchableOpacity style={styles.inlineClose} onPress={() => { attachmentExtractsRef.current.delete(file.id); setAttachmentSession((previous) => removeAttachment(previous, file.id)); }} accessibilityRole="button" accessibilityLabel={`Remove attachment ${file.name}`}><IconClose size={16} color={palette.textMuted} /></TouchableOpacity></View>)}{isListening && <Text style={styles.listeningText} accessibilityLiveRegion="polite">Listening in {voiceLocale}… {voiceDraft ? `“${voiceDraft}”` : 'tap the microphone again to stop and review.'}</Text>}{offlineMode && <Text style={styles.offlineText} accessibilityLiveRegion="polite">Offline mode: drafts queue locally. Visible attachment metadata is retained; files must be reattached before a queued attachment draft can send.</Text>}{(isSpeaking || isGeneratingImage) && <View style={styles.haltRow}>
+      <View style={styles.composerAvoider}><View style={styles.inputArea}><View style={styles.composerMetaRow}><TouchableOpacity style={styles.miniAction} onPress={openVoiceMode} accessibilityRole="button" accessibilityLabel="Open voice mode"><Text style={styles.miniActionText}>Voice</Text></TouchableOpacity>{(activeChat?.bookmarks||[]).length>0&&<TouchableOpacity style={styles.miniAction} onPress={()=>setBookmarkViewerOpen((value)=>!value)} accessibilityRole="button"><Text style={styles.miniActionText}>{(activeChat.bookmarks||[]).length} bookmarks</Text></TouchableOpacity>}{pendingPromptContext&&<View style={styles.promptStage}><Text style={styles.promptStageText}>{pendingPromptContext.role}: {pendingPromptContext.name}</Text><TouchableOpacity onPress={()=>setPendingPromptContext(null)} style={styles.miniAction} accessibilityRole="button"><Text style={styles.miniActionText}>Clear</Text></TouchableOpacity></View>}</View>{activeQueuedTurns.map((turn)=><View key={turn.id} style={styles.queueRow}><View style={styles.queueBody}><Text style={styles.queueTitle}>{turn.status} draft</Text><Text style={styles.queueText} numberOfLines={2}>{turn.content || (turn.attachments||[]).map((file)=>file.name).join(', ') || 'Attachment draft'}</Text>{turn.error&&<Text style={styles.queueError}>{turn.error}</Text>}</View>{['FAILED','CANCELLED'].includes(turn.status)&&<TouchableOpacity style={styles.miniAction} onPress={()=>retryQueuedTurn(turn.id)} accessibilityRole="button"><Text style={styles.miniActionText}>Retry</Text></TouchableOpacity>}{!['SENT','CANCELLED'].includes(turn.status)&&<TouchableOpacity style={styles.miniAction} onPress={()=>cancelQueuedTurn(turn.id)} accessibilityRole="button"><Text style={styles.miniActionText}>Cancel</Text></TouchableOpacity>}</View>)}{attachmentSession.files.map((file) => <View key={file.id} style={styles.attachmentChip}><Text style={styles.attachmentText} numberOfLines={1}>{file.kind}: {file.name} · {file.status.toLowerCase()}</Text><TouchableOpacity style={styles.attachmentMove} onPress={() => handleMoveAttachment(file.id, -1)} accessibilityRole="button" accessibilityLabel={`Move ${file.name} earlier`}><Text style={styles.attachmentMoveText}>↑</Text></TouchableOpacity><TouchableOpacity style={styles.attachmentMove} onPress={() => handleMoveAttachment(file.id, 1)} accessibilityRole="button" accessibilityLabel={`Move ${file.name} later`}><Text style={styles.attachmentMoveText}>↓</Text></TouchableOpacity><TouchableOpacity style={styles.inlineClose} onPress={() => { attachmentExtractsRef.current.delete(file.id); setAttachmentSession((previous) => removeAttachment(previous, file.id)); }} accessibilityRole="button" accessibilityLabel={`Remove attachment ${file.name}`}><IconClose size={16} color={palette.textMuted} /></TouchableOpacity></View>)}{isListening && <Text style={styles.listeningText} accessibilityLiveRegion="polite">Listening in {voiceLocale}… {voiceDraft ? `“${voiceDraft}”` : 'tap the microphone again to stop and review.'}</Text>}{offlineMode && <Text style={styles.offlineText} accessibilityLiveRegion="polite">Offline mode: drafts queue locally. Visible attachment metadata is retained; files must be reattached before a queued attachment draft can send.</Text>}{(isSpeaking || isGeneratingImage) && <View style={styles.haltRow}>
   {isSpeaking && <TouchableOpacity style={styles.haltBtn} onPress={handleStopSpeech} accessibilityRole="button"><Text style={styles.haltBtnText}>Stop speaking</Text></TouchableOpacity>}
   {isGeneratingImage && <Text style={styles.listeningText} accessibilityLiveRegion="polite">Creating image…</Text>}
 </View>}
@@ -621,9 +895,10 @@ function AIConsoleApp() {
     )}
   </View></KeyboardAvoidingView>
   <SettingsSheet visible={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} onExportChat={() => handleExport('txt')} onExportPdf={() => handleExportPdf(PDF_LAYOUTS.POLISHED)} onExportPdfCompact={() => handleExportPdf(PDF_LAYOUTS.COMPACT)} onCreateDocumentZip={handleCreateDocumentZip} onClearChat={() => { if (activeChat) Alert.alert('Clear chat?', 'Delete every message in this chat? This cannot be undone.', [{text:'Cancel',style:'cancel'},{text:'Clear',style:'destructive',onPress:()=>{stopGenerationForChat(activeChat.id);updateChat(activeChat.id,(chat)=>({...chat,messages:[],bookmarks:[]}));}}]); }} onExportData={() => handleExport('json')} onImportData={handleImport} onBackup={handleBackup} onRestore={handleRestore} dataStats={{ chats: chats.length, archived: chats.filter((chat) => chat.archived).length, attachments: chats.reduce((total, chat) => total + chat.messages.filter((message) => message.attachment).length, 0), queued: conversationState.offlineQueue.length, schema: conversationState.storageSchemaVersion }} colorMode={colorMode} onToggleColorMode={() => setColorMode((mode) => (mode === 'dark' ? 'light' : 'dark'))} offlineMode={offlineMode} onToggleOfflineMode={() => setOfflineMode((v) => !v)} voiceLocale={voiceLocale} onChangeVoiceLocale={setVoiceLocale} playbackSpeed={playbackSpeed} onChangePlaybackSpeed={setPlaybackSpeed} onStopSpeech={handleStopSpeech} hapticsEnabled={hapticsEnabled} onToggleHaptics={setHapticsEnabled} returnFocusRef={settingsTriggerRef} palette={palette} />
-  <LLMSettingsSheet visible={isLLMSettingsOpen} onClose={() => { setIsModelPickerOpen(false); setIsLLMSettingsOpen(false); }} apiKey={apiKey} onChangeApiKey={setApiKeyState} currentModelName={currentModelName()} onOpenModelPicker={() => setIsModelPickerOpen(true)} systemPrompt={systemPrompt} onChangeSystemPrompt={setSystemPrompt} temperature={temperature} onChangeTemperature={setTemperature} maxTokens={maxTokens} onChangeMaxTokens={(value) => setMaxTokens(normaliseOutputTokens(value))} isFetchingModels={isFetchingModels} onSyncModels={handleSyncModels} onChangePin={() => { setIsLLMSettingsOpen(false); setPinGateMode('change'); setPinGateOpen(true); }} onOpenProtectedWorkspaceTools={() => setIsProtectedWorkspaceToolsOpen(true)} apiKeyPersistenceStatus={apiKeyPersistenceStatus} returnFocusRef={protectedSettingsTriggerRef} palette={palette} />
+  <LLMSettingsSheet visible={isLLMSettingsOpen} onClose={() => { setIsModelPickerOpen(false); setIsLLMSettingsOpen(false); }} apiKey={apiKey} onChangeApiKey={setApiKeyState} togetherApiKey={togetherApiKey} onChangeTogetherApiKey={setTogetherApiKeyState} llmProvider={llmProvider} onChangeLlmProvider={(value) => { const next = value === 'together' ? 'together' : 'openrouter'; setLlmProvider(next); llmProviderRef.current = next; const cfg = resolveProvider(next); if (!model || model === 'openrouter/auto' || model.startsWith('openrouter/')) { /* keep */ } }} currentModelName={currentModelName()} togetherKeyPersistenceStatus={togetherKeyPersistenceStatus} onOpenModelPicker={() => setIsModelPickerOpen(true)} systemPrompt={systemPrompt} onChangeSystemPrompt={setSystemPrompt} temperature={temperature} onChangeTemperature={setTemperature} maxTokens={maxTokens} onChangeMaxTokens={(value) => setMaxTokens(normaliseOutputTokens(value))} isFetchingModels={isFetchingModels} onSyncModels={handleSyncModels} onChangePin={() => { setIsLLMSettingsOpen(false); setPinGateMode('change'); setPinGateOpen(true); }} onOpenProtectedWorkspaceTools={() => setIsProtectedWorkspaceToolsOpen(true)} apiKeyPersistenceStatus={apiKeyPersistenceStatus} returnFocusRef={protectedSettingsTriggerRef} palette={palette} />
   <AttachmentSourceSheet visible={isAttachmentSourceOpen} onClose={() => setIsAttachmentSourceOpen(false)} onDocument={handlePickFile} onCamera={handleAddCamera} onGallery={handleAddGallery} onGenerateImage={handleGenerateImage} returnFocusRef={attachmentTriggerRef} palette={palette} />
   <PdfReviewSheet visible={Boolean(pdfReview)} job={pdfReview?.job} selectedPages={pdfSelectedPages} onTogglePage={handleTogglePdfPage} onUse={handleUsePdfPages} onCancel={handleCancelPdfReview} returnFocusRef={attachmentTriggerRef} palette={palette} />
+  <VoiceModeSheet visible={voiceModeOpen} onClose={closeVoiceMode} status={voiceMode.status} transcript={voiceMode.transcript} interim={voiceMode.interim} reply={voiceMode.reply} error={voiceMode.error || ''} providerLabel={resolveProvider(llmProvider).label} modelName={currentModelName()} onInterrupt={interruptVoiceMode} onToggleListen={toggleVoiceModeListen} palette={palette} />
   <VoiceReviewSheet visible={voiceReviewOpen} transcript={voiceDraft} onChangeTranscript={(value) => { voiceDraftRef.current = value; setVoiceDraft(value); }} onAccept={acceptVoiceTranscript} onRetry={retryVoiceTranscript} onCancel={cancelVoiceTranscript} returnFocusRef={voiceTriggerRef} palette={palette} />
   <DocumentTargetSheet visible={documentTargetOpen} documents={(conversationState.documents || []).filter((doc) => doc.workspaceId === conversationState.activeWorkspaceId && doc.status !== 'ARCHIVED')} onClose={() => setDocumentTargetOpen(false)} onSelect={commitMessageToDocument} onCreateNew={createDocumentFromMessage} palette={palette} />
   <PinGateModal visible={pinGateOpen} mode={pinGateMode} onClose={() => setPinGateOpen(false)} onSubmit={handlePinSubmit} returnFocusRef={protectedSettingsTriggerRef} palette={palette} /><ModelPicker visible={isModelPickerOpen && isLLMSettingsOpen} onClose={() => setIsModelPickerOpen(false)} modelGroups={modelGroups} selectedId={model} onSelect={setModel} returnFocusRef={protectedSettingsTriggerRef} palette={palette} /><ChatManager visible={isChatManagerOpen} onClose={() => setIsChatManagerOpen(false)} chats={chats} activeChatId={activeChat?.id} generationChatIds={Object.values(generations).filter((job) => !['COMPLETE', 'FAILED', 'CANCELLED'].includes(job.status)).map((job) => job.chatId)} onSelect={(id) => { setConversationState((previous) => ({ ...previous, activeChatId: id })); setInput(''); setAttachmentSession(createAttachmentSession()); attachmentExtractsRef.current.clear(); }} onCreate={handleCreateChat} onRename={(id, title) => updateChat(id, (chat) => ({ ...chat, title }))} onDelete={handleDeleteChat} onTogglePin={(id, value) => updateChat(id, (chat) => setPinned(chat, value))} onToggleArchive={(id, value) => updateChat(id, (chat) => setArchived(chat, value))} onSetTags={(id, tags) => updateChat(id, (chat) => setTags(chat, tags))} onAssignFolder={(id, folder) => { setConversationState((previous) => ({ ...previous, folders: previous.folders.some((item) => item.id === folder.id) ? previous.folders : [...previous.folders, folder] })); updateChat(id, (chat) => assignFolder(chat, folder)); }} onBulkArchive={(ids) => setConversationState((previous) => { const scoped = new Set(previous.chats.filter((chat) => chat.workspaceId === previous.activeWorkspaceId).map((chat) => chat.id)); return { ...previous, chats: bulkArchive(previous.chats, ids.filter((id) => scoped.has(id))) }; })} onBulkDelete={handleBulkDeleteChats} onCreateWorkflowChild={handleCreateWorkflowChild} onCycleWorkflowStatus={handleCycleWorkflowStatus} folders={conversationState.folders} returnFocusRef={chatManagerTriggerRef} palette={palette} />

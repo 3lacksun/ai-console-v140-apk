@@ -1,8 +1,8 @@
 import { createSseParser } from './sseParser.mjs';
 import { normaliseOutputTokens } from './outputTokens.mjs';
+import { resolveProvider } from './providers.mjs';
 
 const REQUEST_TIMEOUT_MS = 600000;
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 function normaliseApiKey(apiKey) {
   return String(apiKey || '')
@@ -11,17 +11,18 @@ function normaliseApiKey(apiKey) {
     .replace(/[\r\n\t]/g, '');
 }
 
-function authHeaders(key) {
+function authHeaders(key, provider) {
+  const cfg = resolveProvider(provider);
   return {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${key}`,
-    'HTTP-Referer': 'https://ai-console.app',
-    'X-Title': "Dr Stone's Command Centre",
+    'HTTP-Referer': cfg.referer,
+    'X-Title': cfg.title,
   };
 }
 
-function parseErrorPayload(text, status) {
-  let message = `OpenRouter request failed (HTTP ${status}).`;
+function parseErrorPayload(text, status, providerLabel) {
+  let message = `${providerLabel || 'Provider'} request failed (HTTP ${status}).`;
   try {
     const parsed = JSON.parse(text || '{}');
     message = parsed.error?.message || parsed.message || message;
@@ -30,8 +31,8 @@ function parseErrorPayload(text, status) {
 }
 
 /**
- * Stream chat completion via fetch (preferred) so Authorization is reliably
- * attached on Android. Falls back to XHR if fetch streaming is unavailable.
+ * Stream chat completion via fetch (preferred) so Authorization is reliable on Android.
+ * provider: 'openrouter' | 'together'
  */
 export function streamChatCompletion({
   apiKey,
@@ -39,17 +40,16 @@ export function streamChatCompletion({
   messages,
   temperature,
   maxTokens,
+  provider = 'openrouter',
   onDelta,
   onDone,
   onError,
 }) {
+  const cfg = resolveProvider(provider);
   const key = normaliseApiKey(apiKey);
   if (!key) {
-    onError(new Error('Missing API key. Open the key icon → AI settings and paste your OpenRouter key (sk-or-v1-...).'));
+    onError(new Error(`Missing ${cfg.label} API key. Open protected settings and paste your key.`));
     return { cancel: () => {} };
-  }
-  if (!key.startsWith('sk-or-') && !key.startsWith('sk-')) {
-    // Soft warning path still attempts the request — some proxy keys differ.
   }
 
   const body = JSON.stringify({
@@ -75,7 +75,7 @@ export function streamChatCompletion({
     if (settled) return;
     settled = true;
     if (timeoutId) clearTimeout(timeoutId);
-    onError(error instanceof Error ? error : new Error(String(error || 'OpenRouter request failed.')));
+    onError(error instanceof Error ? error : new Error(String(error || 'Request failed.')));
   };
 
   const cancel = () => {
@@ -87,20 +87,20 @@ export function streamChatCompletion({
 
   timeoutId = setTimeout(() => {
     cancel();
-    onError(new Error('OpenRouter request timed out.'));
+    onError(new Error(`${cfg.label} request timed out.`));
   }, REQUEST_TIMEOUT_MS);
 
   const runFetch = async () => {
-    const response = await fetch(OPENROUTER_URL, {
+    const response = await fetch(cfg.chatUrl, {
       method: 'POST',
-      headers: authHeaders(key),
+      headers: authHeaders(key, provider),
       body,
       signal: controller?.signal,
     });
 
     if (!response.ok) {
       const text = await response.text().catch(() => '');
-      throw new Error(parseErrorPayload(text, response.status));
+      throw new Error(parseErrorPayload(text, response.status, cfg.label));
     }
 
     const parser = createSseParser((parsed) => {
@@ -108,7 +108,6 @@ export function streamChatCompletion({
       if (content) onDelta(content);
     });
 
-    // Prefer incremental streaming when the runtime exposes a body reader.
     if (response.body && typeof response.body.getReader === 'function') {
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
@@ -122,7 +121,6 @@ export function streamChatCompletion({
       return;
     }
 
-    // Fallback: buffer full SSE payload (still authenticated via fetch headers).
     const full = await response.text();
     parser.push(full, true);
     parser.flush();
@@ -137,9 +135,9 @@ export function streamChatCompletion({
       if (content) onDelta(content);
     });
 
-    xhr.open('POST', OPENROUTER_URL);
+    xhr.open('POST', cfg.chatUrl);
     xhr.timeout = REQUEST_TIMEOUT_MS;
-    const headers = authHeaders(key);
+    const headers = authHeaders(key, provider);
     Object.keys(headers).forEach((name) => {
       try { xhr.setRequestHeader(name, headers[name]); } catch (_) {}
     });
@@ -160,29 +158,26 @@ export function streamChatCompletion({
       }
       parser.flush();
       if (xhr.status >= 200 && xhr.status < 300) settleDone();
-      else settleError(new Error(parseErrorPayload(full, xhr.status)));
+      else settleError(new Error(parseErrorPayload(full, xhr.status, cfg.label)));
     };
 
-    xhr.onerror = () => settleError(new Error('Network error while contacting OpenRouter.'));
-    xhr.ontimeout = () => settleError(new Error('OpenRouter request timed out.'));
+    xhr.onerror = () => settleError(new Error(`Network error while contacting ${cfg.label}.`));
+    xhr.ontimeout = () => settleError(new Error(`${cfg.label} request timed out.`));
     xhr.onabort = () => { settled = true; if (timeoutId) clearTimeout(timeoutId); };
 
     xhr.send(body);
     return xhr;
   };
 
-  // Prefer fetch — more reliable Authorization on Android RN than XHR.
   if (typeof fetch === 'function') {
     runFetch().catch((error) => {
       if (settled) return;
       if (error?.name === 'AbortError') return;
       const msg = String(error?.message || '').toLowerCase();
-      // Auth / client errors from OpenRouter should surface immediately.
       if (msg.includes('auth') || msg.includes('api key') || msg.includes('401') || msg.includes('403') || msg.includes('missing')) {
         settleError(error);
         return;
       }
-      // Network-layer failure only: one XHR retry.
       try {
         runXhr();
       } catch (xhrError) {
@@ -200,20 +195,21 @@ export function streamChatCompletion({
   return { cancel };
 }
 
-export async function fetchModels(apiKey) {
+export async function fetchModels(apiKey, provider = 'openrouter') {
+  const cfg = resolveProvider(provider);
   const key = normaliseApiKey(apiKey);
-  if (!key) throw new Error('Enter an OpenRouter API key before syncing models.');
-  const response = await fetch('https://openrouter.ai/api/v1/models', {
+  if (!key) throw new Error(`Enter a ${cfg.label} API key before syncing models.`);
+  const response = await fetch(cfg.modelsUrl, {
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${key}`,
-      'HTTP-Referer': 'https://ai-console.app',
-      'X-Title': "Dr Stone's Command Centre",
-    },
+    headers: authHeaders(key, provider),
   });
   if (!response.ok) {
     const text = await response.text().catch(() => '');
-    throw new Error(parseErrorPayload(text, response.status));
+    throw new Error(parseErrorPayload(text, response.status, cfg.label));
   }
-  return response.json();
+  const payload = await response.json();
+  // Together may return a bare array; OpenRouter returns { data: [] }
+  if (Array.isArray(payload)) return { data: payload };
+  if (Array.isArray(payload?.data)) return payload;
+  return { data: [] };
 }

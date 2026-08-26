@@ -15,9 +15,11 @@ const PROMPT_PRESETS = [
 ];
 
 export default function LLMSettingsSheet({
-  visible, onClose, apiKey, onChangeApiKey, currentModelName, onOpenModelPicker,
+  visible, onClose, apiKey, onChangeApiKey, togetherApiKey = '', onChangeTogetherApiKey = () => {},
+  llmProvider = 'openrouter', onChangeLlmProvider = () => {},
+  currentModelName, onOpenModelPicker,
   systemPrompt, onChangeSystemPrompt, temperature, onChangeTemperature, maxTokens,
-  onChangeMaxTokens, isFetchingModels, onSyncModels, onChangePin, onOpenProtectedWorkspaceTools = () => {}, apiKeyPersistenceStatus = 'UNKNOWN', palette, returnFocusRef,
+  onChangeMaxTokens, isFetchingModels, onSyncModels, onChangePin, onOpenProtectedWorkspaceTools = () => {}, apiKeyPersistenceStatus = 'UNKNOWN', togetherKeyPersistenceStatus = 'UNKNOWN', palette, returnFocusRef,
 }) {
   const styles = useMemo(() => createStyles(palette), [palette]);
   const reducedMotion = useReducedMotion();
@@ -39,10 +41,30 @@ export default function LLMSettingsSheet({
           <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
             <Text style={styles.securityNote}>This menu locks whenever it is closed. A 6-digit PIN is required for every new access.</Text>
             <View style={styles.section}>
+              <View style={styles.labelRow}><IconServer color={palette.textMuted} /><Text style={styles.label}>Provider</Text></View>
+              <View style={styles.providerRow}>
+                <TouchableOpacity style={[styles.providerChip, llmProvider === 'openrouter' && styles.providerChipActive]} onPress={() => onChangeLlmProvider('openrouter')} accessibilityRole="button" accessibilityState={{ selected: llmProvider === 'openrouter' }}>
+                  <Text style={[styles.providerChipText, llmProvider === 'openrouter' && styles.providerChipTextActive]}>OpenRouter</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.providerChip, llmProvider === 'together' && styles.providerChipActive]} onPress={() => onChangeLlmProvider('together')} accessibilityRole="button" accessibilityState={{ selected: llmProvider === 'together' }}>
+                  <Text style={[styles.providerChipText, llmProvider === 'together' && styles.providerChipTextActive]}>Together.ai</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.hint}>Active provider is used for chat, voice mode, and model sync.</Text>
+            </View>
+
+            <View style={styles.section}>
               <View style={styles.labelRow}><IconKey color={palette.textMuted} /><Text style={styles.label}>OpenRouter API Key</Text></View>
-              <TextInput value={apiKey} onChangeText={onChangeApiKey} placeholder="sk-or-v1-..." placeholderTextColor={palette.textFaint} secureTextEntry={!showKey} autoCapitalize="none" autoCorrect={false} style={styles.input} accessibilityLabel="OpenRouter API key" /><Text style={styles.persistenceStatus} accessibilityLiveRegion="polite">{apiKeyPersistenceStatus === 'SAVED_SECURELY' ? 'Saved securely' : apiKeyPersistenceStatus === 'SESSION_ONLY' ? 'Session only — SecureStore persistence failed' : apiKeyPersistenceStatus === 'READ_FAILED' ? 'Secure storage read failed — existing key was not modified' : apiKeyPersistenceStatus === 'READ_OK' ? 'Secure storage read successfully' : 'Secure persistence not yet verified this session'}</Text>
-              <TouchableOpacity onPress={() => setShowKey((value) => !value)} style={styles.textAction} accessibilityRole="button"><Text style={styles.toggleText}>{showKey ? 'Hide key' : 'Show key'}</Text></TouchableOpacity>
-              <Text style={styles.hint}>API key storage uses the device-backed SecureStore.</Text>
+              <TextInput value={apiKey} onChangeText={onChangeApiKey} placeholder="sk-or-v1-..." placeholderTextColor={palette.textFaint} secureTextEntry={!showKey} autoCapitalize="none" autoCorrect={false} style={styles.input} accessibilityLabel="OpenRouter API key" />
+              <Text style={styles.persistenceStatus} accessibilityLiveRegion="polite">{apiKeyPersistenceStatus === 'SAVED_SECURELY' ? 'Saved securely' : apiKeyPersistenceStatus === 'SESSION_ONLY' ? 'Session only' : apiKeyPersistenceStatus === 'READ_FAILED' ? 'Read failed' : apiKeyPersistenceStatus === 'READ_OK' ? 'Read OK' : 'Not verified'}</Text>
+            </View>
+
+            <View style={styles.section}>
+              <View style={styles.labelRow}><IconKey color={palette.textMuted} /><Text style={styles.label}>Together.ai API Key</Text></View>
+              <TextInput value={togetherApiKey} onChangeText={onChangeTogetherApiKey} placeholder="together-..." placeholderTextColor={palette.textFaint} secureTextEntry={!showKey} autoCapitalize="none" autoCorrect={false} style={styles.input} accessibilityLabel="Together.ai API key" />
+              <Text style={styles.persistenceStatus} accessibilityLiveRegion="polite">{togetherKeyPersistenceStatus === 'SAVED_SECURELY' ? 'Saved securely' : togetherKeyPersistenceStatus === 'SESSION_ONLY' ? 'Session only' : togetherKeyPersistenceStatus === 'READ_FAILED' ? 'Read failed' : togetherKeyPersistenceStatus === 'READ_OK' ? 'Read OK' : 'Not verified'}</Text>
+              <TouchableOpacity onPress={() => setShowKey((value) => !value)} style={styles.textAction} accessibilityRole="button"><Text style={styles.toggleText}>{showKey ? 'Hide keys' : 'Show keys'}</Text></TouchableOpacity>
+              <Text style={styles.hint}>Keys are stored in device SecureStore. Voice Mode uses the active provider.</Text>
             </View>
 
             <View style={styles.section}>

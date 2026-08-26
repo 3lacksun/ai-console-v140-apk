@@ -3,13 +3,16 @@ import * as SecureStore from 'expo-secure-store';
 import { createPinVerifier } from './pinVerifier.mjs';
 import { normaliseCState, serialiseCState } from '../workspaces/workspaceSchema.mjs';
 
-const SECURE_KEY_NAME='openRouterKey'; const SECURE_LLM_SETTINGS_PIN='llmSettingsPin';
+const SECURE_KEY_NAME='openRouterKey'; const SECURE_TOGETHER_KEY_NAME='togetherApiKey'; const SECURE_LLM_SETTINGS_PIN='llmSettingsPin';
 export const VERSIONED_APP_STATE_KEY='aiConsoleVersionedState'; export const VERSIONED_APP_STATE_BACKUP_KEY='aiConsoleVersionedState.previous';
 let stateWriteChain=Promise.resolve(); let secureWriteChain=Promise.resolve();
 const serialiseExact=(state)=>JSON.stringify(serialiseCState(state));
 export async function getApiKeyResult(){try{return{ok:true,value:(await SecureStore.getItemAsync(SECURE_KEY_NAME))||'',status:'READ_OK'};}catch(e){return{ok:false,value:'',status:'READ_FAILED',error:e?.message||'Secure key storage could not be read.'};}}
 export async function getApiKey(){return(await getApiKeyResult()).value;}
 export function setApiKey(value){const op=async()=>{try{if(value)await SecureStore.setItemAsync(SECURE_KEY_NAME,value);else await SecureStore.deleteItemAsync(SECURE_KEY_NAME);return{ok:true,persisted:true,status:'SAVED_SECURELY'};}catch(e){return{ok:false,persisted:false,status:'SESSION_ONLY',error:e?.message||'Secure key persistence is unavailable.'};}}; secureWriteChain=secureWriteChain.then(op,op); return secureWriteChain;}
+export async function getTogetherApiKeyResult(){try{return{ok:true,value:(await SecureStore.getItemAsync(SECURE_TOGETHER_KEY_NAME))||'',status:'READ_OK'};}catch(e){return{ok:false,value:'',status:'READ_FAILED',error:e?.message||'Secure key storage could not be read.'};}}
+export async function getTogetherApiKey(){return(await getTogetherApiKeyResult()).value;}
+export function setTogetherApiKey(value){const op=async()=>{try{if(value)await SecureStore.setItemAsync(SECURE_TOGETHER_KEY_NAME,value);else await SecureStore.deleteItemAsync(SECURE_TOGETHER_KEY_NAME);return{ok:true,persisted:true,status:'SAVED_SECURELY'};}catch(e){return{ok:false,persisted:false,status:'SESSION_ONLY',error:e?.message||'Secure key persistence is unavailable.'};}}; secureWriteChain=secureWriteChain.then(op,op); return secureWriteChain;}
 export async function getLLMSettingsPin(){try{return(await SecureStore.getItemAsync(SECURE_LLM_SETTINGS_PIN))||'';}catch(_){throw new Error('Secure PIN storage could not be read on this device.');}}
 export async function setLLMSettingsPin(value){try{if(value)await SecureStore.setItemAsync(SECURE_LLM_SETTINGS_PIN,createPinVerifier(value));else await SecureStore.deleteItemAsync(SECURE_LLM_SETTINGS_PIN);return{ok:true};}catch(_){throw new Error('Secure PIN storage is unavailable on this device.');}}
 

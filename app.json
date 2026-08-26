@@ -2,7 +2,7 @@
   "expo": {
     "name": "Dr Stone's Command Centre",
     "slug": "command-centre",
-    "version": "1.5.1",
+    "version": "1.5.2",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -13,7 +13,7 @@
     "android": {
       "package": "com.nexarenew.aiconsole",
       "softwareKeyboardLayoutMode": "resize",
-      "versionCode": 16,
+      "versionCode": 17,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
