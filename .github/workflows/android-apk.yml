@@ -23,8 +23,8 @@ env:
   ANDROID_API_LEVEL: "36"
   ANDROID_BUILD_TOOLS_VERSION: "36.0.0"
   SIGNING_MODE: ${{ inputs.signing_mode || 'preview' }}
-  PREVIEW_APK_NAME: AI_Console_v1.4.0_preview-release-js-embedded.apk
-  PRODUCTION_APK_NAME: AI_Console_v1.4.0_production-release-signed.apk
+  PREVIEW_APK_NAME: CommandCentre_v1.5.5_preview-debug-signed.apk
+  PRODUCTION_APK_NAME: CommandCentre_v1.5.5_production-release-signed.apk
   DIAGNOSTICS_DIR: ci-diagnostics
 
 jobs:
@@ -58,89 +58,4 @@ jobs:
           mkdir -p "$DIAGNOSTICS_DIR"
           node --version
           npm --version
-          java -version
-
-      - name: npm install
-        run: npm install --no-fund --legacy-peer-deps
-
-      - name: Android SDK packages
-        run: |
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS_VERSION}"
-
-      - name: Expo prebuild
-        env:
-          EXPO_NO_GIT_STATUS: "1"
-        run: npx expo prebuild --platform android --clean --no-install
-
-      - name: Use debug keystore for release (preview only)
-        if: ${{ env.SIGNING_MODE != 'production' }}
-        run: |
-          set -euo pipefail
-          printf '\n' >> android/gradle.properties
-          printf 'MYAPP_UPLOAD_STORE_FILE=debug.keystore\n' >> android/gradle.properties
-          printf 'MYAPP_UPLOAD_KEY_ALIAS=androiddebugkey\n' >> android/gradle.properties
-          printf 'MYAPP_UPLOAD_STORE_PASSWORD=android\n' >> android/gradle.properties
-          printf 'MYAPP_UPLOAD_KEY_PASSWORD=android\n' >> android/gradle.properties
-          if [ -f android/app/build.gradle ]; then
-            sed -i 's/signingConfig signingConfigs.release/signingConfig signingConfigs.debug/g' android/app/build.gradle || true
-          fi
-          if [ -f android/app/build.gradle.kts ]; then
-            sed -i 's/signingConfig = signingConfigs.getByName("release")/signingConfig = signingConfigs.getByName("debug")/g' android/app/build.gradle.kts || true
-          fi
-          echo "Preview release will use debug signing"
-
-      - name: Gradle assembleRelease
-        run: |
-          set -euo pipefail
-          chmod +x android/gradlew
-          cd android && ./gradlew app:assembleRelease --no-daemon --max-workers=2
-
-      - name: Label APK
-        run: |
-          set -euo pipefail
-          APK="android/app/build/outputs/apk/release/app-release.apk"
-          if [ ! -f "$APK" ]; then
-            APK=$(find android/app/build/outputs/apk -name '*.apk' | head -1)
-          fi
-          test -f "$APK"
-          if [ "$SIGNING_MODE" = "production" ]; then
-            OUT="$PRODUCTION_APK_NAME"
-          else
-            OUT="$PREVIEW_APK_NAME"
-          fi
-          cp "$APK" "$OUT"
-          echo "APK_PATH=$OUT" >> "$GITHUB_ENV"
-          ls -lh "$OUT"
-
-      - name: Verify JS embedded
-        run: |
-          set -euo pipefail
-          mkdir -p "$DIAGNOSTICS_DIR/apk-js"
-          unzip -q "$APK_PATH" -d "$DIAGNOSTICS_DIR/apk-js"
-          find "$DIAGNOSTICS_DIR/apk-js" -type f | sort | tee "$DIAGNOSTICS_DIR/apk-files.txt"
-          if ! find "$DIAGNOSTICS_DIR/apk-js" -type f \( -name '*.bundle' -o -name '*.hbc' -o -name 'index.android.bundle' \) | grep -q .; then
-            echo "No embedded JS/Hermes bundle — would hang on splash" >&2
-            exit 1
-          fi
-          echo "EMBEDDED_JS=PASS"
-
-      - name: Upload APK
-        if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
-        with:
-          name: ${{ env.SIGNING_MODE == 'production' && 'AI_Console_v1.4.0_production-release-signed' || 'AI_Console_v1.4.0_preview-release-js-embedded' }}
-          path: |
-            ${{ env.PREVIEW_APK_NAME }}
-            ${{ env.PRODUCTION_APK_NAME }}
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: Upload diagnostics
-        if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
-        with:
-          name: AI_Console_v1.4.0_android-ci-diagnostics
-          path: ci-diagnostics/**
-          if-no-files-found: warn
-          retention-days: 30
+          java --version
