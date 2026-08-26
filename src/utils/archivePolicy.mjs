@@ -1,8 +1,10 @@
+import { UPLOAD_LIMITS } from './uploadLimits.mjs';
+
 export const ZIP_POLICY = Object.freeze({
-  maxFiles: 100,
-  maxExpandedBytes: 64 * 1024 * 1024,
-  maxEntryBytes: 12 * 1024 * 1024,
-  maxCompressionRatio: 100,
+  maxFiles: UPLOAD_LIMITS.zip.maxFiles,
+  maxExpandedBytes: UPLOAD_LIMITS.zip.maxExpandedBytes,
+  maxEntryBytes: UPLOAD_LIMITS.zip.maxEntryBytes,
+  maxCompressionRatio: UPLOAD_LIMITS.zip.maxCompressionRatio,
 });
 
 export function assertSafeArchivePath(name = '') {

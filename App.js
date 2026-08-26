@@ -28,6 +28,8 @@ import { sanitizeChatsForPersistence } from './src/utils/privacy.mjs';
 import { fetchModels, streamChatCompletion } from './src/utils/streamChat';
 import { isLegacyPlainPinRecord, pinVerifierNeedsUpgrade, verifyPinAgainstRecordAsync } from './src/utils/pinVerifier.mjs';
 import { pickAndExtractFile } from './src/utils/fileUpload';
+import { runOcr } from './src/documents/ocrPipeline.mjs';
+import { localOcrAdapter } from './src/documents/localOcrAdapter.js';
 import { captureCameraImage, loadImageDataUrl, pickGalleryImage } from './src/utils/mediaPicker';
 import { generateImage } from './src/utils/imageGeneration';
 import { DEFAULT_OUTPUT_TOKENS, normaliseOutputTokens } from './src/utils/outputTokens.mjs';
@@ -61,7 +63,7 @@ import { normalisePinThrottle, pinThrottleRemainingMs, recordPinFailure, resetPi
 
 const calculateEstimatedTokens = (text = '') => Math.ceil(String(text).length / 4);
 const PIN_THROTTLE_STORAGE_KEY = 'aiConsolePinThrottle';
-const APP_RELEASE_LABEL = "Command Centre v1.5.2";
+const APP_RELEASE_LABEL = "Command Centre v1.5.3";
 
 let cachedSpeechRecognitionModule = null;
 
@@ -361,7 +363,7 @@ function AIConsoleApp() {
     setConversationState(result.state);
     return result.state;
   };
-  const validateArchivePickerSize = async (asset, maxBytes = 25 * 1024 * 1024) => {
+  const validateArchivePickerSize = async (asset, maxBytes = 150 * 1024 * 1024) => {
     const info = await FileSystem.getInfoAsync(asset?.uri || '', { size: true });
     const size = Number(info?.size);
     if (!info?.exists || !Number.isFinite(size) || size < 0) throw new Error('Archive size could not be verified safely.');
@@ -493,8 +495,58 @@ function AIConsoleApp() {
   const handleBackup = async () => { try { const backup = createOrdinaryBackup(conversationState); const uri = `${FileSystem.cacheDirectory}AI_Console_Backup_${Date.now()}.json`; await FileSystem.writeAsStringAsync(uri, JSON.stringify(backup, null, 2), { encoding: FileSystem.EncodingType.UTF8 }); if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(uri, { mimeType: 'application/json' }); else setError(`Backup saved to ${uri}`); } catch (backupError) { setError(backupError.message || 'Unable to create validated ordinary backup.'); } };
   const handleRestore = async () => { try { const picked = await DocumentPicker.getDocumentAsync({ type: 'application/json', copyToCacheDirectory: true }); if (picked.canceled) return; const raw = await FileSystem.readAsStringAsync(picked.assets[0].uri); const backup = JSON.parse(raw); const preview = previewRestore(conversationStateRef.current, backup); const prepared = prepareAtomicRestore(conversationStateRef.current, backup); if (prepared.error) throw new Error(prepared.error); Alert.alert('Restore backup?', `Current: ${preview.currentChats} chats, ${preview.currentWorkspaces} workspaces, ${preview.currentDocuments} documents. Incoming: ${preview.incomingChats} chats, ${preview.incomingWorkspaces} workspaces, ${preview.incomingDocuments} documents.`, [{ text: 'Cancel', style: 'cancel' }, { text: 'Restore', style: 'destructive', onPress: () => { void commitCandidateState(prepared.nextState).then(() => setError('Backup durably restored and read-back verified.')).catch((restoreError) => setError(restoreError.message || 'Backup restore failed; rollback was attempted.')); } }]); } catch (restoreError) { setError(restoreError.message || 'Backup restore validation failed.'); } };
   const handleSyncModels = async () => { if (isFetchingModels) return; setIsFetchingModels(true); try { const data = await fetchModels(activeProviderKey(), llmProviderRef.current || llmProvider); const grouped = {}; (data.data || []).forEach((item) => { const provider = formatProviderName(item.id.split('/')[0]); (grouped[provider] ||= []).push({ id: item.id, name: item.name }); }); Object.keys(grouped).forEach((key) => grouped[key].sort((a, b) => a.name.localeCompare(b.name))); if (Object.keys(grouped).length) setModelGroups(grouped); else setError('OpenRouter returned an empty model list.'); } catch (syncError) { setError(syncError.message || 'Unable to sync models from OpenRouter.'); } finally { setIsFetchingModels(false); } };
-  const handlePickFile = async () => { if (isLoading) return; try { const selected = await pickAndExtractFile(); if (!selected) return; const file = createAttachment({ name: selected.attachment?.name, uri: selected.attachment?.uri || selected.pdfAsset?.uri || null, size: selected.attachment?.size, kind: selected.attachment?.kind || 'document', mimeType: selected.attachment?.type || selected.pdfAsset?.mimeType || '', source: 'document' }); if (selected.pdfAsset) { setAttachmentSession((previous) => addAttachment(previous, { ...file, status: 'PROCESSING' })); const job = await processPdf({ file: { ...selected.pdfAsset, name: file.name, uri: file.uri }, adapter: localPdfAdapter }); if (job.status !== 'READY') { setAttachmentSession((previous) => updateAttachmentStatus(previous, file.id, 'FAILED', job.error)); throw new Error(job.error || 'PDF text extraction failed.'); } setPdfReview({ attachmentId: file.id, job }); setPdfSelectedPages(job.pages.map((page) => page.pageNumber)); return; } attachmentExtractsRef.current.set(file.id, selected.context || ''); setAttachmentSession((previous) => addAttachment(previous, { ...file, status: 'READY' })); } catch (uploadError) { setError(uploadError.message || 'Unable to prepare this file.'); } };
-  const addImageAttachment = async (asset) => { if (!asset) return; const dataUrl = await loadImageDataUrl(asset); const file = createAttachment(asset); attachmentExtractsRef.current.set(file.id, { type: 'image_url', image_url: { url: dataUrl } }); setAttachmentSession((previous) => addAttachment(previous, { ...file, status: 'READY' })); };
+  const ingestExtractedUpload = async (selected) => {
+    if (!selected) return;
+    const file = createAttachment({ name: selected.attachment?.name, uri: selected.attachment?.uri || selected.pdfAsset?.uri || null, size: selected.attachment?.size, kind: selected.attachment?.kind || 'document', mimeType: selected.attachment?.type || selected.pdfAsset?.mimeType || '', source: 'document' });
+    if (selected.pdfAsset) {
+      setAttachmentSession((previous) => addAttachment(previous, { ...file, status: 'PROCESSING' }));
+      const job = await processPdf({ file: { ...selected.pdfAsset, name: file.name, uri: file.uri }, adapter: localPdfAdapter });
+      if (job.status !== 'READY') {
+        setAttachmentSession((previous) => updateAttachmentStatus(previous, file.id, 'FAILED', job.error));
+        throw new Error(job.error || 'PDF text extraction failed.');
+      }
+      setPdfReview({ attachmentId: file.id, job });
+      setPdfSelectedPages(job.pages.map((page) => page.pageNumber));
+      return;
+    }
+    if (selected.imageDataUrl) {
+      attachmentExtractsRef.current.set(file.id, { type: 'image_url', image_url: { url: selected.imageDataUrl } });
+      setAttachmentSession((previous) => addAttachment(previous, { ...file, status: 'READY' }));
+      try {
+        const ocr = await runOcr({ source: { name: file.name, uri: file.uri }, adapter: localOcrAdapter });
+        if (ocr.status === 'READY' && ocr.text.trim()) {
+          attachmentExtractsRef.current.set(file.id, { type: 'text', text: `OCR (${file.name}):\n${ocr.text}` });
+        }
+      } catch (_) {}
+      return;
+    }
+    attachmentExtractsRef.current.set(file.id, selected.context || '');
+    setAttachmentSession((previous) => addAttachment(previous, { ...file, status: 'READY' }));
+  };
+  const handlePickFile = async () => {
+    if (isLoading) return;
+    try {
+      const selected = await pickAndExtractFile();
+      if (!selected) return;
+      const items = Array.isArray(selected) ? selected : [selected];
+      for (const item of items) await ingestExtractedUpload(item);
+    } catch (uploadError) {
+      setError(uploadError.message || 'Unable to prepare this file.');
+    }
+  };
+  const addImageAttachment = async (asset) => {
+    if (!asset) return;
+    const dataUrl = await loadImageDataUrl(asset);
+    const file = createAttachment(asset);
+    attachmentExtractsRef.current.set(file.id, { type: 'image_url', image_url: { url: dataUrl } });
+    setAttachmentSession((previous) => addAttachment(previous, { ...file, status: 'READY' }));
+    try {
+      const ocr = await runOcr({ source: { name: file.name, uri: file.uri }, adapter: localOcrAdapter });
+      if (ocr.status === 'READY' && String(ocr.text || '').trim()) {
+        attachmentExtractsRef.current.set(file.id, { type: 'text', text: `OCR (${file.name}):\n${ocr.text}` });
+      }
+    } catch (_) {}
+  };
   const handleAddCamera = async () => { try { await addImageAttachment(await captureCameraImage()); } catch (cameraError) { setError(cameraError.message || 'Unable to use the camera.'); } };
   const handleAddGallery = async () => { try { await addImageAttachment(await pickGalleryImage()); } catch (galleryError) { setError(galleryError.message || 'Unable to open the gallery.'); } };
   const handleTogglePdfPage = (pageNumber) => setPdfSelectedPages((previous) => previous.includes(pageNumber) ? previous.filter((page) => page !== pageNumber) : [...previous, pageNumber].sort((a, b) => a - b));

@@ -1,4 +1,5 @@
-export const PDF_LIMITS = Object.freeze({ maxBytes: 10 * 1024 * 1024, maxPages: 100, maxContextCharacters: 60000 });
+import { UPLOAD_LIMITS } from '../utils/uploadLimits.mjs';
+export const PDF_LIMITS = Object.freeze({ maxBytes: UPLOAD_LIMITS.maxPdfBytes, maxPages: UPLOAD_LIMITS.maxPdfPages, maxContextCharacters: UPLOAD_LIMITS.maxPdfContextCharacters });
 export const PdfStatus = Object.freeze({ IDLE: 'IDLE', INSPECTING: 'INSPECTING', EXTRACTING: 'EXTRACTING', READY: 'READY', CANCELLED: 'CANCELLED', FAILED: 'FAILED', UNAVAILABLE: 'UNAVAILABLE' });
 
 export const createPdfJob = (file, now = Date.now()) => ({ file: { name: file?.name || 'document.pdf', size: Number(file?.size) || 0, mimeType: file?.mimeType || 'application/pdf' }, status: PdfStatus.IDLE, pageCount: null, pages: [], selectedPages: [], extractedText: '', error: null, progress: 0, createdAt: now, updatedAt: now });

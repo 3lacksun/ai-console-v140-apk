@@ -1,4 +1,5 @@
-export const RAW_ZIP_LIMITS=Object.freeze({maxSourceBytes:25*1024*1024,maxEntries:100,maxCentralDirectoryBytes:2*1024*1024});
+import { UPLOAD_LIMITS } from './uploadLimits.mjs';
+export const RAW_ZIP_LIMITS=Object.freeze({maxSourceBytes:UPLOAD_LIMITS.zip.maxSourceBytes,maxEntries:UPLOAD_LIMITS.zip.maxEntries,maxCentralDirectoryBytes:UPLOAD_LIMITS.zip.maxCentralDirectoryBytes});
 const decoder=new TextDecoder('utf-8');
 const safeName=(name)=>{const n=String(name).replace(/\\/g,'/');if(!n||n.startsWith('/')||/^[A-Za-z]:\//.test(n)||n.split('/').includes('..'))throw new Error(`Unsafe ZIP path: ${name}`);return n.split('/').filter(x=>x&&x!=='.').join('/');};
 const findEocd=(bytes,view)=>{const start=Math.max(0,bytes.length-65557);for(let i=bytes.length-22;i>=start;i--)if(view.getUint32(i,true)===0x06054b50)return i;return-1;};

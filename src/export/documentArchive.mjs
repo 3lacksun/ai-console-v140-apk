@@ -1,7 +1,7 @@
 import { deterministicFilename, exportChatHtml, exportChatMarkdown, exportChatText, safeChatExport } from './chatExport.mjs';
 import { sha256Hex } from '../utils/sha256.mjs';
 
-export const MAX_DOCUMENT_BUNDLE_SOURCE_BYTES = 8 * 1024 * 1024;
+export const MAX_DOCUMENT_BUNDLE_SOURCE_BYTES = 80 * 1024 * 1024;
 const utf8Bytes = (value) => globalThis.TextEncoder ? new TextEncoder().encode(String(value)).length : unescape(encodeURIComponent(String(value))).length;
 
 export const documentZipFilename = (chat, date = new Date()) => deterministicFilename(chat, 'zip', date);

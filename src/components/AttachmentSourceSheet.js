@@ -43,8 +43,8 @@ export default function AttachmentSourceSheet({
             <TouchableOpacity style={styles.action} onPress={() => choose(onDocument)} accessibilityRole="button">
               <IconUpload size={18} color={palette.cyanBright} />
               <View style={styles.actionCopy}>
-                <Text style={styles.actionTitle}>Document / PDF / ZIP</Text>
-                <Text style={styles.actionText}>Choose a local document. PDFs are inspected and page text is extracted locally where supported.</Text>
+                <Text style={styles.actionTitle}>Document / PDF / ZIP / APK / image</Text>
+                <Text style={styles.actionText}>Pick one or more files (up to 150 MB each). PDFs extract locally, ZIPs unpack text, APKs are inventoried, images attach for vision/OCR.</Text>
               </View>
             </TouchableOpacity>
             <TouchableOpacity style={styles.action} onPress={() => choose(onCamera)} accessibilityRole="button">
@@ -58,7 +58,7 @@ export default function AttachmentSourceSheet({
               <IconGallery size={20} color={palette.cyanBright} />
               <View style={styles.actionCopy}>
                 <Text style={styles.actionTitle}>Upload image</Text>
-                <Text style={styles.actionText}>Pick an existing photo from the device library.</Text>
+                <Text style={styles.actionText}>Pick a photo up to 40 MB (JPEG, PNG, WebP, GIF, HEIC). OCR runs when a local engine is present.</Text>
               </View>
             </TouchableOpacity>
             {typeof onGenerateImage === 'function' ? (
