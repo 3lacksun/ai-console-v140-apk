@@ -53,11 +53,12 @@ import { processPdf } from './src/documents/pdfPipeline.mjs';
 import { localPdfAdapter } from './src/documents/localPdfAdapter';
 import { addDocumentSource, buildContextManifest, createDocumentSession, selectDocumentPages, selectDocumentSources } from './src/documents/contextManifest.mjs';
 import { loadSpeechRecognitionModule } from './src/voice/speechRecognitionAdapter.mjs';
+import { preparePlaybackAudioSession, prepareRecordingAudioSession, normaliseSpeakRate } from './src/voice/speechPlayback.mjs';
 import { normalisePinThrottle, pinThrottleRemainingMs, recordPinFailure, resetPinThrottle } from './src/security/pinThrottle.mjs';
 
 const calculateEstimatedTokens = (text = '') => Math.ceil(String(text).length / 4);
 const PIN_THROTTLE_STORAGE_KEY = 'aiConsolePinThrottle';
-const APP_RELEASE_LABEL = "Command Centre v1.5.0";
+const APP_RELEASE_LABEL = "Command Centre v1.5.1";
 
 let cachedSpeechRecognitionModule = null;
 
@@ -459,20 +460,41 @@ function AIConsoleApp() {
   const handleUsePdfPages = () => { if (!pdfReview) return; const selected = pdfReview.job.pages.filter((page) => pdfSelectedPages.includes(page.pageNumber)); const context = selected.map((page) => `[PDF: ${pdfReview.job.file.name} · Page ${page.pageNumber}]\n${page.text?.trim() || 'No extractable text was found on this page.'}`).join('\n\n'); attachmentExtractsRef.current.set(pdfReview.attachmentId, context); setAttachmentSession((previous) => updateAttachmentStatus(previous, pdfReview.attachmentId, 'READY')); setConversationState((previous) => { let session = createDocumentSession(); const source = { id: pdfReview.attachmentId, filename: pdfReview.job.file.name, status: 'READY', pages: pdfReview.job.pages, retained: false }; session = addDocumentSource(session, source); session = selectDocumentSources(session, [source.id]); session = selectDocumentPages(session, pdfSelectedPages.map((pageNumber) => ({ sourceId: source.id, pageNumber }))); session = buildContextManifest(session, { maxCharacters: 60000 }); return { ...previous, documentSession: session }; }); setPdfReview(null); setPdfSelectedPages([]); };
   const handleMoveAttachment = (id, direction) => setAttachmentSession((previous) => { const index = previous.files.findIndex((file) => file.id === id); const destination = index + direction; if (index < 0 || destination < 0 || destination >= previous.files.length) return previous; return reorderAttachment(previous, id, destination); });
   const handleSpeakMessage = async (message) => {
+    const content = String(message?.content || '').trim();
+    if (!content) {
+      setError('Nothing to speak — this message has no text.');
+      return;
+    }
     try {
       await Speech.stop();
+      await preparePlaybackAudioSession();
       setIsSpeaking(true);
-      Speech.speak(String(message?.content || ''), {
-        language: voiceLocale,
-        rate: playbackSpeed,
+      const rate = normaliseSpeakRate(playbackSpeed, Platform.OS);
+      // Prefer a device voice matching the locale when available.
+      let voice;
+      try {
+        const voices = await Speech.getAvailableVoicesAsync();
+        const wanted = String(voiceLocale || 'en-GB').toLowerCase();
+        voice = (voices || []).find((v) => String(v.language || '').toLowerCase() === wanted)
+          || (voices || []).find((v) => String(v.language || '').toLowerCase().startsWith(wanted.split('-')[0]))
+          || undefined;
+      } catch (_) {}
+      Speech.speak(content, {
+        language: voiceLocale || 'en-GB',
+        voice: voice?.identifier,
+        rate,
+        pitch: 1.0,
         onStart: () => setIsSpeaking(true),
         onDone: () => setIsSpeaking(false),
         onStopped: () => setIsSpeaking(false),
-        onError: () => { setIsSpeaking(false); setError('Text-to-speech playback failed.'); },
+        onError: () => {
+          setIsSpeaking(false);
+          setError('Text-to-speech failed. Check media volume is up (not ringer only).');
+        },
       });
     } catch (_) {
       setIsSpeaking(false);
-      setError('Text-to-speech playback failed.');
+      setError('Text-to-speech playback failed on this device.');
     }
   };
   const handleStopSpeech = async () => {
@@ -567,8 +589,8 @@ function AIConsoleApp() {
   const stopDocumentGeneration = () => { const active = documentGenerationRef.current; if (!active?.job) return; try { active.stream?.cancel?.(); } catch (_) {} const cancelled={...active.job,status:'CANCELLED',error:'Stopped by user.'}; documentGenerationRef.current=null; updateDocumentGenerationJob(cancelled); };
   const retryDocumentGeneration = () => { const job = documentGeneration || (conversationState.documentGenerationJobs || []).find((item) => item.documentId === activeDocument?.id && ['FAILED','CANCELLED'].includes(item.status)); if (!job) return; const doc=(conversationStateRef.current.documents || []).find((item)=>item.id===job.documentId); if (!doc) { setError('The document for this generation no longer exists.'); return; } handleAiDocumentOperation(job.operation, doc, job.sectionId); };
 
-  const startSpeechRecognition = async () => { const speechRecognition = cachedSpeechRecognitionModule; if (!speechRecognition || typeof speechRecognition.requestPermissionsAsync !== 'function' || typeof speechRecognition.start !== 'function') { setError('Speech recognition is unavailable in this build. Text input remains available.'); setIsListening(false); return; } try { const permission = await speechRecognition.requestPermissionsAsync(); if (!permission.granted) { setError('Microphone permission is required for speech-to-text.'); return; } voiceDraftRef.current = ''; setVoiceDraft(''); setVoiceReviewOpen(false); const speechOptions = { lang: 'en-GB', interimResults: true, addsPunctuation: true, continuous: true }; speechOptions.lang = voiceLocale || speechOptions.lang; speechRecognition.start(speechOptions); setIsListening(true); } catch (_) { setError('Speech recognition is unavailable on this device. Text input remains available.'); setIsListening(false); } };
-  const toggleSpeechRecognition = async () => { const speechRecognition = cachedSpeechRecognitionModule; if (isListening) { try { speechRecognition?.stop?.(); } catch (_) { setError('Speech recognition could not be stopped cleanly.'); } setIsListening(false); return; } await startSpeechRecognition(); };
+  const startSpeechRecognition = async () => { const speechRecognition = cachedSpeechRecognitionModule; if (!speechRecognition || typeof speechRecognition.requestPermissionsAsync !== 'function' || typeof speechRecognition.start !== 'function') { setError('Speech recognition is unavailable in this build. Text input remains available.'); setIsListening(false); return; } try { const permission = await speechRecognition.requestPermissionsAsync(); if (!permission.granted) { setError('Microphone permission is required for speech-to-text.'); return; } await prepareRecordingAudioSession(); voiceDraftRef.current = ''; setVoiceDraft(''); setVoiceReviewOpen(false); const speechOptions = { lang: 'en-GB', interimResults: true, addsPunctuation: true, continuous: true }; speechOptions.lang = voiceLocale || speechOptions.lang; speechRecognition.start(speechOptions); setIsListening(true); } catch (_) { setError('Speech recognition is unavailable on this device. Text input remains available.'); setIsListening(false); } };
+  const toggleSpeechRecognition = async () => { const speechRecognition = cachedSpeechRecognitionModule; if (isListening) { try { speechRecognition?.stop?.(); } catch (_) { setError('Speech recognition could not be stopped cleanly.'); } setIsListening(false); try { await preparePlaybackAudioSession(); } catch (_) {} return; } await startSpeechRecognition(); };
   const acceptVoiceTranscript = () => { const transcript = voiceDraft.trim(); if (transcript) setInput((current) => current.trim() ? `${current.trim()}\n${transcript}` : transcript); voiceDraftRef.current = ''; setVoiceDraft(''); setVoiceReviewOpen(false); };
   const cancelVoiceTranscript = () => { voiceDraftRef.current = ''; setVoiceDraft(''); setVoiceReviewOpen(false); };
   const retryVoiceTranscript = async () => { cancelVoiceTranscript(); await startSpeechRecognition(); };
