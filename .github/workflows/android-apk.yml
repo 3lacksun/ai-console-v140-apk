@@ -58,4 +58,118 @@ jobs:
           mkdir -p "$DIAGNOSTICS_DIR"
           node --version
           npm --version
-          java --version
+          java -version
+
+      - name: npm install
+        run: npm install --no-fund --legacy-peer-deps
+
+      - name: Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS_VERSION}"
+
+      - name: Expo prebuild
+        env:
+          EXPO_NO_GIT_STATUS: "1"
+        run: npx expo prebuild --platform android --clean --no-install
+
+      - name: Use debug keystore for release (preview only)
+        if: ${{ env.SIGNING_MODE != 'production' }}
+        run: |
+          set -euo pipefail
+          printf '\n' >> android/gradle.properties
+          printf 'MYAPP_UPLOAD_STORE_FILE=debug.keystore\n' >> android/gradle.properties
+          printf 'MYAPP_UPLOAD_KEY_ALIAS=androiddebugkey\n' >> android/gradle.properties
+          printf 'MYAPP_UPLOAD_STORE_PASSWORD=android\n' >> android/gradle.properties
+          printf 'MYAPP_UPLOAD_KEY_PASSWORD=android\n' >> android/gradle.properties
+          if [ -f android/app/build.gradle ]; then
+            sed -i 's/signingConfig signingConfigs.release/signingConfig signingConfigs.debug/g' android/app/build.gradle || true
+          fi
+          if [ -f android/app/build.gradle.kts ]; then
+            sed -i 's/signingConfig = signingConfigs.getByName("release")/signingConfig = signingConfigs.getByName("debug")/g' android/app/build.gradle.kts || true
+          fi
+          echo "Preview release will use debug signing"
+
+      - name: Configure production keystore from secrets
+        if: ${{ env.SIGNING_MODE == 'production' }}
+        env:
+          AI_CONSOLE_ANDROID_KEYSTORE_BASE64: ${{ secrets.AI_CONSOLE_ANDROID_KEYSTORE_BASE64 }}
+          AI_CONSOLE_ANDROID_STORE_PASSWORD: ${{ secrets.AI_CONSOLE_ANDROID_STORE_PASSWORD }}
+          AI_CONSOLE_ANDROID_KEY_ALIAS: ${{ secrets.AI_CONSOLE_ANDROID_KEY_ALIAS }}
+          AI_CONSOLE_ANDROID_KEY_PASSWORD: ${{ secrets.AI_CONSOLE_ANDROID_KEY_PASSWORD }}
+          AI_CONSOLE_ANDROID_CERT_SHA256: ${{ secrets.AI_CONSOLE_ANDROID_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          if [ -z "${AI_CONSOLE_ANDROID_KEYSTORE_BASE64:-}" ] || [ -z "${AI_CONSOLE_ANDROID_STORE_PASSWORD:-}" ] || [ -z "${AI_CONSOLE_ANDROID_KEY_ALIAS:-}" ] || [ -z "${AI_CONSOLE_ANDROID_KEY_PASSWORD:-}" ]; then
+            echo "PRODUCTION_SIGNING_PREFLIGHT=FAIL"
+            echo "Production signing requested but required GitHub Secrets are missing." >&2
+            exit 1
+          fi
+          mkdir -p android/app
+          echo "$AI_CONSOLE_ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/upload-keystore.jks
+          printf '\n' >> android/gradle.properties
+          printf 'MYAPP_UPLOAD_STORE_FILE=upload-keystore.jks\n' >> android/gradle.properties
+          printf 'MYAPP_UPLOAD_KEY_ALIAS=%s\n' "$AI_CONSOLE_ANDROID_KEY_ALIAS" >> android/gradle.properties
+          printf 'MYAPP_UPLOAD_STORE_PASSWORD=%s\n' "$AI_CONSOLE_ANDROID_STORE_PASSWORD" >> android/gradle.properties
+          printf 'MYAPP_UPLOAD_KEY_PASSWORD=%s\n' "$AI_CONSOLE_ANDROID_KEY_PASSWORD" >> android/gradle.properties
+          if [ -n "${AI_CONSOLE_ANDROID_CERT_SHA256:-}" ]; then
+            echo "PRODUCTION_SIGNING_PREFLIGHT=SHA256_PROVIDED"
+          else
+            echo "PRODUCTION_SIGNING_PREFLIGHT=SHA256_UNCHECKED"
+          fi
+          echo "Production keystore written (not logged)."
+
+      - name: Gradle assembleRelease
+        run: |
+          set -euo pipefail
+          chmod +x android/gradlew
+          cd android && ./gradlew app:assembleRelease --no-daemon --max-workers=2
+
+      - name: Label APK
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/release/app-release.apk"
+          if [ ! -f "$APK" ]; then
+            APK=$(find android/app/build/outputs/apk -name '*.apk' | head -1)
+          fi
+          test -f "$APK"
+          if [ "$SIGNING_MODE" = "production" ]; then
+            OUT="$PRODUCTION_APK_NAME"
+          else
+            OUT="$PREVIEW_APK_NAME"
+          fi
+          cp "$APK" "$OUT"
+          echo "APK_PATH=$OUT" >> "$GITHUB_ENV"
+          ls -lh "$OUT"
+
+      - name: Verify JS embedded
+        run: |
+          set -euo pipefail
+          mkdir -p "$DIAGNOSTICS_DIR/apk-js"
+          unzip -q "$APK_PATH" -d "$DIAGNOSTICS_DIR/apk-js"
+          find "$DIAGNOSTICS_DIR/apk-js" -type f | sort | tee "$DIAGNOSTICS_DIR/apk-files.txt"
+          if ! find "$DIAGNOSTICS_DIR/apk-js" -type f \( -name '*.bundle' -o -name '*.hbc' -o -name 'index.android.bundle' \) | grep -q .; then
+            echo "No embedded JS/Hermes bundle — would hang on splash" >&2
+            exit 1
+          fi
+          echo "EMBEDDED_JS=PASS"
+
+      - name: Upload APK
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: ${{ env.SIGNING_MODE == 'production' && 'CommandCentre_v1.5.5_production-release-signed' || 'CommandCentre_v1.5.5_preview-debug-signed' }}
+          path: |
+            ${{ env.PREVIEW_APK_NAME }}
+            ${{ env.PRODUCTION_APK_NAME }}
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: CommandCentre_v1.5.5_android-ci-diagnostics
+          path: ci-diagnostics/**
+          if-no-files-found: warn
+          retention-days: 30
