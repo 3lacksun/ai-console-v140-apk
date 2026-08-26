@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { sanitizeMessageForPersistence } from '../src/utils/privacy.mjs';
 import { UPLOAD_LIMITS } from '../src/utils/uploadLimits.mjs';
 import { PROVIDERS, hasProviderKey } from '../src/utils/providers.mjs';
@@ -41,10 +42,17 @@ test('generated data URLs persist as sandbox file URIs and empty sources are dro
 });
 
 test('stream client no longer falls back from fetch to XHR on transient errors', async () => {
-  const fs = await import('node:fs');
   const source = fs.readFileSync(new URL('../src/utils/streamChat.js', import.meta.url), 'utf8');
   assert.match(source, /Do not fall back to XHR/);
   const catchBlock = source.match(/runFetch\(\)\.catch\(\(error\) => \{([\s\S]*?)\}\);/);
   assert.ok(catchBlock, 'fetch error handler missing');
   assert.equal(catchBlock[1].includes('runXhr()'), false);
+});
+
+test('OCR mixed payloads keep both vision and text parts', () => {
+  const source = fs.readFileSync(new URL('../App.js', import.meta.url), 'utf8');
+  assert.match(source, /type: 'mixed'/);
+  assert.match(source, /persistImageToSandbox/);
+  assert.match(source, /protectSensitiveScreen/);
+  assert.match(source, /hasProviderKey\(activeProviderKey\(\)\)/);
 });

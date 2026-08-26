@@ -5,12 +5,14 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 export const RECOVERY_MARKERS = [
   'AI Console could not start safely',
   'AI Console could not open this screen safely',
+  'Command Centre could not start safely',
+  'Command Centre could not open this screen safely',
 ];
 
 export function expectedReadyMarker(appConfig = JSON.parse(fs.readFileSync('app.json', 'utf8'))) {
   const version = appConfig?.expo?.version;
   if (!version) throw new Error('APP_READY_UI_CONFIG_INVALID: app.json expo.version is missing');
-  return `AI Console v${version}`;
+  return `Command Centre v${version}`;
 }
 
 export function classifyAppReadyUi(xml, marker) {
