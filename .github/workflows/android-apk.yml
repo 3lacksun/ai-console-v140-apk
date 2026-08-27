@@ -79,6 +79,9 @@ jobs:
           EXPO_NO_GIT_STATUS: "1"
         run: npx expo prebuild --platform android --clean --no-install
 
+      - name: Verify crash-prone native modules were not linked
+        run: node scripts/verify-android-native-excludes.mjs
+
       - name: Use debug keystore for release (preview only)
         if: ${{ env.SIGNING_MODE != 'production' }}
         run: |
