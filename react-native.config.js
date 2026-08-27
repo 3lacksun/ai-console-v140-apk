@@ -1,8 +1,6 @@
 /**
- * These packages stay in package.json for optional JS adapters, but their
- * native Android/iOS projects must not be autolinked. SDK 56 speech bindings
- * and unused biometric/screen-capture .so files have killed the process
- * before the JS boot shell can mount.
+ * Optional packages stay in package.json for JS adapters, but their native
+ * projects must not load on Android process start.
  */
 module.exports = {
   dependencies: {
@@ -13,6 +11,12 @@ module.exports = {
       platforms: { android: null, ios: null },
     },
     'expo-screen-capture': {
+      platforms: { android: null, ios: null },
+    },
+    'expo-av': {
+      platforms: { android: null, ios: null },
+    },
+    'expo-splash-screen': {
       platforms: { android: null, ios: null },
     },
   },

@@ -15,7 +15,7 @@
       "package": "com.nexarenew.aiconsole",
       "allowBackup": false,
       "softwareKeyboardLayoutMode": "resize",
-      "versionCode": 24,
+      "versionCode": 25,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -47,16 +47,7 @@
       "./plugins/with16kbPageSize",
       "./plugins/withExcludeUnsafeNativeModules",
       "expo-sharing",
-      "expo-status-bar",
-      [
-        "expo-splash-screen",
-        {
-          "backgroundColor": "#ffffff",
-          "image": "./assets/splash.png",
-          "imageWidth": 200,
-          "resizeMode": "contain"
-        }
-      ]
+      "expo-status-bar"
     ]
   }
 }

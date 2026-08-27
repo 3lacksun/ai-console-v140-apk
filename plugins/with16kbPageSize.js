@@ -1,25 +1,43 @@
-const { withAppBuildGradle } = require('@expo/config-plugins');
+const { withAndroidManifest, withAppBuildGradle } = require('@expo/config-plugins');
 
 /**
- * Keep JNI libs in the APK with modern (non-legacy) packaging so 16KB page
- * devices can map arm64 .so files. Do not set
- * android.bundle.enableUncompressedNativeLibs — AGP 8.1+ removed that flag
- * and Expo SDK 57 / AGP 8+ will refuse to evaluate the project.
+ * Samsung One UI is killing this process at Activity start when JNI libs are
+ * memory-mapped from the APK (useLegacyPackaging false). The ELF files are
+ * already 16KB-aligned internally. Extract them at install time instead so
+ * dlopen uses a normal file, then keep extractNativeLibs=true on <application>.
  */
-function with16kbPageSize(config) {
-  return withAppBuildGradle(config, (cfg) => {
-    const body = cfg.modResults.contents || '';
-    if (body.includes('useLegacyPackaging')) return cfg;
-
+function applyLegacyPackaging(cfg) {
+  let body = cfg.modResults.contents || '';
+  body = body.replace(/useLegacyPackaging\s*=?\s*false/g, (match) =>
+    match.includes('=') ? 'useLegacyPackaging = true' : 'useLegacyPackaging true',
+  );
+  if (!/useLegacyPackaging/.test(body)) {
     const groovyBlock =
-      'android {\n    packagingOptions {\n        jniLibs {\n            useLegacyPackaging false\n        }\n    }';
+      'android {\n    packagingOptions {\n        jniLibs {\n            useLegacyPackaging true\n        }\n    }';
     const ktsBlock =
-      'android {\n    packaging {\n        jniLibs {\n            useLegacyPackaging = false\n        }\n    }';
-
+      'android {\n    packaging {\n        jniLibs {\n            useLegacyPackaging = true\n        }\n    }';
     const useKts = cfg.modResults.language === 'kt' || /packaging\s*\{/.test(body);
-    cfg.modResults.contents = body.replace(/android\s*\{/, useKts ? ktsBlock : groovyBlock);
+    body = body.replace(/android\s*\{/, useKts ? ktsBlock : groovyBlock);
+  }
+  cfg.modResults.contents = body;
+  return cfg;
+}
+
+function applyExtractNativeLibs(config) {
+  return withAndroidManifest(config, (cfg) => {
+    const manifest = cfg.modResults.manifest;
+    const app = manifest.application?.[0];
+    if (app) {
+      app.$ = app.$ || {};
+      app.$['android:extractNativeLibs'] = 'true';
+    }
     return cfg;
   });
+}
+
+function with16kbPageSize(config) {
+  config = withAppBuildGradle(config, applyLegacyPackaging);
+  return applyExtractNativeLibs(config);
 }
 
 module.exports = with16kbPageSize;

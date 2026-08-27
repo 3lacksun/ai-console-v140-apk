@@ -50,13 +50,17 @@
       "exclude": [
         "expo-speech-recognition",
         "expo-screen-capture",
-        "expo-local-authentication"
+        "expo-local-authentication",
+        "expo-av",
+        "expo-splash-screen"
       ],
       "android": {
         "exclude": [
           "expo-speech-recognition",
           "expo-screen-capture",
-          "expo-local-authentication"
+          "expo-local-authentication",
+          "expo-av",
+          "expo-splash-screen"
         ]
       }
     }

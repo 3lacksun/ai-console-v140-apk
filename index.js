@@ -4,7 +4,7 @@ import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-na
 import AppErrorBoundary from './src/components/AppErrorBoundary';
 import { loadApplicationModule } from './src/startup/appLoader.mjs';
 
-const BOOT_MARK = 'startup shell 24';
+const BOOT_MARK = 'startup shell 25';
 
 try {
   const errorUtils = global.ErrorUtils;

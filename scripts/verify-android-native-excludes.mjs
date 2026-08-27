@@ -5,12 +5,16 @@ const BLOCKED = [
   'expo-speech-recognition',
   'expo-local-authentication',
   'expo-screen-capture',
+  'expo-av',
+  'expo-splash-screen',
 ];
 
 const BLOCKED_JAVA = [
   'expo.modules.speechrecognition',
   'expo.modules.localauthentication',
   'expo.modules.screencapture',
+  'expo.modules.av',
+  'expo.modules.splashscreen',
 ];
 
 const fail = (message) => {
@@ -28,7 +32,7 @@ for (const name of BLOCKED) {
 }
 
 const rnConfigPath = 'react-native.config.js';
- if (!fs.existsSync(rnConfigPath)) fail('react-native.config.js is missing');
+if (!fs.existsSync(rnConfigPath)) fail('react-native.config.js is missing');
 const rnConfig = fs.readFileSync(rnConfigPath, 'utf8');
 for (const name of BLOCKED) {
   if (!rnConfig.includes(`'${name}'`)) fail(`react-native.config.js does not disable ${name}`);

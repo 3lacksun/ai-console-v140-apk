@@ -6,12 +6,16 @@ const BLOCKED = [
   'expo-speech-recognition',
   'expo-local-authentication',
   'expo-screen-capture',
+  'expo-av',
+  'expo-splash-screen',
 ];
 
 const BLOCKED_PACKAGES = [
   'expo.modules.speechrecognition',
   'expo.modules.localauthentication',
   'expo.modules.screencapture',
+  'expo.modules.av',
+  'expo.modules.splashscreen',
 ];
 
 function walk(dir, files = []) {
