@@ -1,25 +1,33 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { registerRootComponent } from 'expo';
 import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import * as SplashScreen from 'expo-splash-screen';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppErrorBoundary from './src/components/AppErrorBoundary';
 import { loadApplicationModule } from './src/startup/appLoader.mjs';
 
-SplashScreen.preventAutoHideAsync().catch(() => {});
+const BOOT_MARK = 'startup shell 24';
+
+try {
+  const errorUtils = global.ErrorUtils;
+  if (errorUtils && typeof errorUtils.setGlobalHandler === 'function') {
+    const previous = typeof errorUtils.getGlobalHandler === 'function' ? errorUtils.getGlobalHandler() : null;
+    errorUtils.setGlobalHandler((error, isFatal) => {
+      try { previous?.(error, isFatal); } catch (_) {}
+    });
+  }
+} catch (_) {}
 
 function BootShell({ phase, message, onOpen }) {
   return (
     <SafeAreaView style={styles.root}>
       <View style={styles.card} accessibilityRole="alert">
-        <Text style={styles.kicker}>startup shell 23</Text>
+        <Text style={styles.kicker}>{BOOT_MARK}</Text>
         <Text style={styles.title}>
           {phase === 'fail' ? 'Command Centre could not start safely.' : "Dr Stone's Command Centre"}
         </Text>
         <Text style={styles.body}>
           {phase === 'fail'
             ? (message || 'The application module failed to load. Your saved data has not been cleared.')
-            : 'Native load succeeded. Tap Open to load the full app. If this screen never appears, the crash is still native.'}
+            : 'Native load succeeded. If you can read this, JS is running. Tap Open to load the full app.'}
         </Text>
         <TouchableOpacity
           style={styles.button}
@@ -52,27 +60,19 @@ function Root() {
     });
   }, []);
 
-  useEffect(() => {
-    SplashScreen.hideAsync().catch(() => {});
-  }, [phase]);
-
   if (phase === 'ready' && ready.component) {
     const LoadedApp = ready.component;
     return (
-      <SafeAreaProvider>
-        <AppErrorBoundary>
-          <LoadedApp />
-        </AppErrorBoundary>
-      </SafeAreaProvider>
+      <AppErrorBoundary>
+        <LoadedApp />
+      </AppErrorBoundary>
     );
   }
 
   return (
-    <SafeAreaProvider>
-      <AppErrorBoundary>
-        <BootShell phase={phase} message={ready.error} onOpen={load} />
-      </AppErrorBoundary>
-    </SafeAreaProvider>
+    <AppErrorBoundary>
+      <BootShell phase={phase} message={ready.error} onOpen={load} />
+    </AppErrorBoundary>
   );
 }
 

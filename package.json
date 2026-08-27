@@ -49,12 +49,14 @@
     "autolinking": {
       "exclude": [
         "expo-speech-recognition",
-        "expo-screen-capture"
+        "expo-screen-capture",
+        "expo-local-authentication"
       ],
       "android": {
         "exclude": [
           "expo-speech-recognition",
-          "expo-screen-capture"
+          "expo-screen-capture",
+          "expo-local-authentication"
         ]
       }
     }

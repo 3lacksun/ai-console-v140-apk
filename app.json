@@ -15,7 +15,7 @@
       "package": "com.nexarenew.aiconsole",
       "allowBackup": false,
       "softwareKeyboardLayoutMode": "resize",
-      "versionCode": 23,
+      "versionCode": 24,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -36,17 +36,6 @@
     },
     "plugins": [
       [
-        "expo-speech-recognition",
-        {
-          "microphonePermission": "Allow AI Console to use your microphone for voice input.",
-          "speechRecognitionPermission": "Allow AI Console to convert your speech into text.",
-          "androidSpeechServicePackages": [
-            "com.google.android.googlequicksearchbox",
-            "com.google.android.tts"
-          ]
-        }
-      ],
-      [
         "expo-image-picker",
         {
           "photosPermission": "Allow AI Console to select images for the active attachment session.",
@@ -54,9 +43,9 @@
         }
       ],
       "expo-secure-store",
-      "expo-local-authentication",
       "./plugins/withDisallowBackup",
       "./plugins/with16kbPageSize",
+      "./plugins/withExcludeUnsafeNativeModules",
       "expo-sharing",
       "expo-status-bar",
       [
