@@ -58,13 +58,16 @@ jobs:
           mkdir -p "$DIAGNOSTICS_DIR"
           node --version
           npm --version
-          java -version
+          java --version
 
       - name: npm install
         run: npm install --no-fund --legacy-peer-deps
 
       - name: Apply v1.5.5 App.js remediations
         run: node scripts/apply-v155-app-remediation.mjs
+
+      - name: Declare voiceResultHandlerRef before first render
+        run: node scripts/apply-voice-ref.mjs
 
       - name: Android SDK packages
         run: |
@@ -144,6 +147,32 @@ jobs:
           cp "$APK" "$OUT"
           echo "APK_PATH=$OUT" >> "$GITHUB_ENV"
           ls -lh "$OUT"
+
+      - name: 16KB zipalign and verify
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          ZIPALIGN=$(find "$SDK/build-tools" -name zipalign | sort | tail -1)
+          APKSIGNER=$(find "$SDK/build-tools" -name apksigner | sort | tail -1)
+          test -x "$ZIPALIGN"
+          if "$ZIPALIGN" -c -P 16 4 "$APK_PATH" >/tmp/zipalign-check.txt 2>&1; then
+            echo "ZIPALIGN_16K=ALREADY_ALIGNED"
+            cat /tmp/zipalign-check.txt | tee "$DIAGNOSTICS_DIR/zipalign-16k.txt"
+          else
+            ALIGNED="${APK_PATH%.apk}-16k.apk"
+            "$ZIPALIGN" -f -P 16 4 "$APK_PATH" "$ALIGNED"
+            if [ "$SIGNING_MODE" != "production" ]; then
+              KS=$(find android -name 'debug.keystore' | head -1)
+              test -f "$KS"
+              test -x "$APKSIGNER"
+              "$APKSIGNER" sign --ks "$KS" --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android "$ALIGNED"
+            else
+              echo "Production APK left at Gradle alignment; verify only."
+            fi
+            "$ZIPALIGN" -c -P 16 -v 4 "$ALIGNED" | tee "$DIAGNOSTICS_DIR/zipalign-16k.txt"
+            mv "$ALIGNED" "$APK_PATH"
+          fi
+          echo "ZIPALIGN_16K=PASS"
 
       - name: Verify JS embedded
         run: |
