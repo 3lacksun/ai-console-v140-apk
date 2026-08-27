@@ -13,7 +13,7 @@ AI Console is an Expo SDK 57 / React Native 0.86 project using **Continuous Nati
 - npm lockfile: `package-lock.json`
 - Application ID: `com.nexarenew.aiconsole`
 - Expo app version: `1.5.5`
-- Android versionCode: `21`
+- Android versionCode: `22`
 
 ## Clean local verification
 
