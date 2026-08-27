@@ -10,7 +10,7 @@ const app = readJson('app.json').expo;
 const deps = pkg.dependencies || {};
 
 const EXPECTED_VERSION = '1.5.5';
-const EXPECTED_ANDROID_VERSION_CODE = 20;
+const EXPECTED_ANDROID_VERSION_CODE = 21;
 const EXPECTED_ANDROID_PACKAGE = 'com.nexarenew.aiconsole';
 const EXPECTED_EXPO_MAJOR = '57';
 const EXPECTED_REACT = '19.2.3';
