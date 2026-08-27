@@ -46,11 +46,12 @@ test('startup import graph contains no unsupported latin1 TextDecoder and byte m
   assert.deepEqual(Array.from(decoded, (character) => character.charCodeAt(0)), [0x00, 0x41, 0x7f, 0x80, 0xff]);
 });
 
-test('Android speech package visibility covers modern and legacy Google services', () => {
-  const plugin = appConfig.expo.plugins.find((entry) => Array.isArray(entry) && entry[0] === 'expo-speech-recognition');
-  assert.ok(plugin);
-  assert.ok(plugin[1].androidSpeechServicePackages.includes('com.google.android.googlequicksearchbox'));
-  assert.ok(plugin[1].androidSpeechServicePackages.includes('com.google.android.tts'));
+test('speech and biometric native packages stay off the Android prebuild path', () => {
+  const names = (appConfig.expo.plugins || []).map((entry) => Array.isArray(entry) ? entry[0] : entry);
+  assert.equal(names.includes('expo-speech-recognition'), false);
+  assert.equal(names.includes('expo-local-authentication'), false);
+  assert.ok(names.includes('./plugins/withExcludeUnsafeNativeModules'));
+  assert.ok((appConfig.expo.android.permissions || []).includes('RECORD_AUDIO'));
 });
 
 test('CI requires Expo prebuild, release assemble and embedded JS before an APK artefact is labelled', () => {
@@ -89,11 +90,11 @@ test('publishable APK build command is fail-closed and EAS route is diagnostic-o
   assert.match(policy, /run_emulator_checks=true/);
 });
 
-test('current release identity is v1.5.5 / versionCode 20 across user-facing build guidance', () => {
+test('current release identity is v1.5.5 / versionCode 24 across user-facing build guidance', () => {
   const building = fs.readFileSync(new URL('../docs/BUILDING.md', import.meta.url), 'utf8');
   assert.match(building, /^# Building Command Centre v1\.5\.5/m);
   assert.match(building, /Expo app version: `1\.5\.5`/);
-  assert.match(building, /Android versionCode: `20`/);
+  assert.match(building, /Android versionCode: `24`/);
   assert.match(building, /CommandCentre_v1\.5\.5_preview-debug-signed\.apk/);
   assert.doesNotMatch(building, /AI_Console_v1\.4\.0_preview-debug-signed\.apk/);
   assert.doesNotMatch(appSource, /AI Console v1\.4\.0/);
