@@ -44,5 +44,19 @@
   "devDependencies": {
     "@babel/core": "^7.24.0",
     "babel-preset-expo": "~57.0.0"
+  },
+  "expo": {
+    "autolinking": {
+      "exclude": [
+        "expo-speech-recognition",
+        "expo-screen-capture"
+      ],
+      "android": {
+        "exclude": [
+          "expo-speech-recognition",
+          "expo-screen-capture"
+        ]
+      }
+    }
   }
 }

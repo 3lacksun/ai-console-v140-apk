@@ -10,14 +10,14 @@ const app = readJson('app.json').expo;
 const deps = pkg.dependencies || {};
 
 const EXPECTED_VERSION = '1.5.5';
-const EXPECTED_ANDROID_VERSION_CODE = 22;
+const EXPECTED_ANDROID_VERSION_CODE = 23;
 const EXPECTED_ANDROID_PACKAGE = 'com.nexarenew.aiconsole';
 const EXPECTED_EXPO_MAJOR = '57';
 const EXPECTED_REACT = '19.2.3';
 const EXPECTED_REACT_NATIVE = '0.86.2';
 const EXPO_MAJOR_EXCEPTIONS = new Set([
-  'expo-speech-recognition', // guarded adapter, SDK 56 line until 57 is published
-  'expo-av', // Expo 57 ships expo-av 16
+  'expo-speech-recognition',
+  'expo-av',
 ]);
 
 if (pkg.version !== EXPECTED_VERSION || app.version !== EXPECTED_VERSION) {

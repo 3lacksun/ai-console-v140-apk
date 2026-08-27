@@ -6,19 +6,29 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppErrorBoundary from './src/components/AppErrorBoundary';
 import { loadApplicationModule } from './src/startup/appLoader.mjs';
 
-// Keep native splash until the first frame of the real app — or the recovery shell — is ready.
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-function ModuleRecoveryShell({ message, onRetry }) {
+function BootShell({ phase, message, onOpen }) {
   return (
     <SafeAreaView style={styles.root}>
       <View style={styles.card} accessibilityRole="alert">
-        <Text style={styles.title}>Command Centre could not start safely.</Text>
-        <Text style={styles.body}>
-          {message || 'The application module failed to load. Your saved data has not been cleared.'}
+        <Text style={styles.kicker}>startup shell 23</Text>
+        <Text style={styles.title}>
+          {phase === 'fail' ? 'Command Centre could not start safely.' : "Dr Stone's Command Centre"}
         </Text>
-        <TouchableOpacity style={styles.button} onPress={onRetry} accessibilityRole="button" accessibilityLabel="Retry Command Centre">
-          <Text style={styles.buttonText}>Retry Command Centre</Text>
+        <Text style={styles.body}>
+          {phase === 'fail'
+            ? (message || 'The application module failed to load. Your saved data has not been cleared.')
+            : 'Native load succeeded. Tap Open to load the full app. If this screen never appears, the crash is still native.'}
+        </Text>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={onOpen}
+          disabled={phase === 'loading'}
+          accessibilityRole="button"
+          accessibilityLabel="Open Command Centre"
+        >
+          <Text style={styles.buttonText}>{phase === 'loading' ? 'Opening…' : 'Open Command Centre'}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -26,37 +36,41 @@ function ModuleRecoveryShell({ message, onRetry }) {
 }
 
 function Root() {
-  const [ready, setReady] = useState({ status: 'LOADING', component: null, error: '' });
+  const [phase, setPhase] = useState('boot');
+  const [ready, setReady] = useState({ component: null, error: '' });
 
   const load = useCallback(() => {
-    setReady({ status: 'LOADING', component: null, error: '' });
+    setPhase('loading');
     void loadApplicationModule(async () => require('./App')).then((result) => {
-      if (result.ok) setReady({ status: 'READY', component: result.component, error: '' });
-      else setReady({ status: 'UNAVAILABLE', component: null, error: result.error });
+      if (result.ok) {
+        setReady({ component: result.component, error: '' });
+        setPhase('ready');
+      } else {
+        setReady({ component: null, error: result.error });
+        setPhase('fail');
+      }
     });
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
-
-  useEffect(() => {
-    if (ready.status === 'LOADING') return;
     SplashScreen.hideAsync().catch(() => {});
-  }, [ready.status]);
+  }, [phase]);
 
-  let body = null;
-  if (ready.status === 'READY' && ready.component) {
+  if (phase === 'ready' && ready.component) {
     const LoadedApp = ready.component;
-    body = <LoadedApp />;
-  } else if (ready.status !== 'LOADING') {
-    body = <ModuleRecoveryShell message={ready.error} onRetry={load} />;
+    return (
+      <SafeAreaProvider>
+        <AppErrorBoundary>
+          <LoadedApp />
+        </AppErrorBoundary>
+      </SafeAreaProvider>
+    );
   }
 
   return (
     <SafeAreaProvider>
       <AppErrorBoundary>
-        {body}
+        <BootShell phase={phase} message={ready.error} onOpen={load} />
       </AppErrorBoundary>
     </SafeAreaProvider>
   );
@@ -65,6 +79,7 @@ function Root() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#f8fafc', justifyContent: 'center', padding: 20 },
   card: { borderRadius: 18, borderWidth: 1, borderColor: '#cbd5e1', backgroundColor: '#ffffff', padding: 20 },
+  kicker: { color: '#0f819c', fontSize: 12, fontWeight: '800', letterSpacing: 0.6, marginBottom: 8 },
   title: { color: '#0f172a', fontSize: 20, fontWeight: '800', marginBottom: 10 },
   body: { color: '#475569', fontSize: 14, lineHeight: 21, marginBottom: 18 },
   button: { minHeight: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0f819c', paddingHorizontal: 18 },
