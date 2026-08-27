@@ -9,7 +9,7 @@ const dep = (name) => pkg.dependencies?.[name] || pkg.devDependencies?.[name] ||
 
 const EXPECTED_VERSION = '1.5.5';
 const EXPECTED_NAME = 'command-centre';
-const EXPECTED_VERSION_CODE = 23;
+const EXPECTED_VERSION_CODE = 24;
 
 if (pkg.name !== EXPECTED_NAME) fail(`package.json name drift: ${pkg.name}`);
 if (pkg.version !== EXPECTED_VERSION) fail(`package.json version drift: ${pkg.version}`);
@@ -42,6 +42,10 @@ if (expo.version !== EXPECTED_VERSION) fail(`app.json version drift: ${expo.vers
 if (!['automatic', 'light', 'dark'].includes(expo.userInterfaceStyle)) fail(`app.json userInterfaceStyle unexpected: ${expo.userInterfaceStyle}`);
 if (expo.android?.package !== 'com.nexarenew.aiconsole') fail(`Android package drift: ${expo.android?.package}`);
 if (expo.android?.versionCode !== EXPECTED_VERSION_CODE) fail(`Android versionCode drift: ${expo.android?.versionCode}`);
+const excluded = [...(pkg.expo?.autolinking?.exclude || []), ...(pkg.expo?.autolinking?.android?.exclude || [])];
+for (const name of ['expo-speech-recognition', 'expo-screen-capture', 'expo-local-authentication']) {
+  if (!excluded.includes(name)) fail(`autolink exclude missing ${name}`);
+}
 console.log('ANDROID_SDK_36_RESOLUTION: guarded by Expo SDK 57 package alignment; workflow verifies generated Gradle compile/target SDK after Expo prebuild.');
 
 console.log('CI_VERSION_GUARD: PASS');

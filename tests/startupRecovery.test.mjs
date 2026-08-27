@@ -30,9 +30,13 @@ test('application module loader contains import-time failures as data', async ()
   assert.equal(ready.ok, true); assert.equal(ready.component, component);
 });
 
-test('startup recovery boundary wraps the statically bundled App so splash cannot hang on a missing dynamic module', () => {
+test('startup recovery boundary lazy-loads App after a native-safe boot shell', () => {
   const entry = read('index.js'); const app = read('App.js');
-  assert.match(entry, /import\s+App\s+from\s+['"]\.\/App['"]/);
+  assert.match(entry, /require\('\.\/App'\)/);
+  assert.match(entry, /loadApplicationModule/);
+  assert.match(entry, /startup shell 24/);
+  assert.match(entry, /ErrorUtils/);
+  assert.doesNotMatch(entry, /expo-splash-screen/);
   assert.match(entry, /AppErrorBoundary/);
   assert.match(entry, /registerRootComponent/);
   assert.doesNotMatch(app, /from 'expo-speech-recognition'/);

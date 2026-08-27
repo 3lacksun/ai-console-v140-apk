@@ -10,7 +10,7 @@ const app = readJson('app.json').expo;
 const deps = pkg.dependencies || {};
 
 const EXPECTED_VERSION = '1.5.5';
-const EXPECTED_ANDROID_VERSION_CODE = 23;
+const EXPECTED_ANDROID_VERSION_CODE = 24;
 const EXPECTED_ANDROID_PACKAGE = 'com.nexarenew.aiconsole';
 const EXPECTED_EXPO_MAJOR = '57';
 const EXPECTED_REACT = '19.2.3';
@@ -36,6 +36,11 @@ if (pkg.main !== 'index.js' || !fs.existsSync('index.js')) {
   fail('Crash-safe root entrypoint is missing.');
 }
 
+const entry = fs.readFileSync('index.js', 'utf8');
+if (!entry.includes("require('./App')") || !entry.includes('startup shell 24') || !entry.includes('ErrorUtils')) {
+  fail('Crash-safe lazy boot shell / ErrorUtils contract is missing from index.js.');
+}
+
 if (major(deps.expo) !== EXPECTED_EXPO_MAJOR) {
   fail(`Expo SDK ${EXPECTED_EXPO_MAJOR} alignment is required: ${deps.expo || 'missing'}`);
 }
@@ -54,8 +59,27 @@ if (deps['expo-speech-recognition'] && major(deps['expo-speech-recognition']) !=
   fail(`expo-speech-recognition remains pinned to the guarded SDK 56-compatible line pending SDK 57 runtime proof: ${deps['expo-speech-recognition']}`);
 }
 
-if (!app.plugins?.some((entry) => (Array.isArray(entry) ? entry[0] : entry) === 'expo-speech-recognition')) {
-  fail('Speech-recognition native configuration is missing.');
+const pluginNames = (app.plugins || []).map((entry) => (Array.isArray(entry) ? entry[0] : entry));
+if (pluginNames.includes('expo-speech-recognition')) {
+  fail('expo-speech-recognition must not run as a config plugin; it injects a crash-prone native module.');
+}
+if (pluginNames.includes('expo-local-authentication')) {
+  fail('expo-local-authentication must not run as a config plugin on the crash-safe Android path.');
+}
+if (pluginNames.includes('expo-screen-capture')) {
+  fail('expo-screen-capture must stay a runtime-only screen guard, not a config plugin.');
+}
+if (!pluginNames.includes('./plugins/withExcludeUnsafeNativeModules')) {
+  fail('Native-module exclusion config plugin is missing.');
+}
+
+const excluded = [...(pkg.expo?.autolinking?.exclude || []), ...(pkg.expo?.autolinking?.android?.exclude || [])];
+for (const name of ['expo-speech-recognition', 'expo-screen-capture', 'expo-local-authentication']) {
+  if (!excluded.includes(name)) fail(`autolink exclude missing ${name}`);
+}
+
+if (!app.android?.permissions?.includes('RECORD_AUDIO')) {
+  fail('RECORD_AUDIO must remain declared after removing the speech config plugin.');
 }
 
 if (!['automatic', 'light', 'dark'].includes(app.userInterfaceStyle)) {
