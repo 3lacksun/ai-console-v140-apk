@@ -9,7 +9,7 @@ const dep = (name) => pkg.dependencies?.[name] || pkg.devDependencies?.[name] ||
 
 const EXPECTED_VERSION = '1.5.5';
 const EXPECTED_NAME = 'command-centre';
-const EXPECTED_VERSION_CODE = 20;
+const EXPECTED_VERSION_CODE = 21;
 
 if (pkg.name !== EXPECTED_NAME) fail(`package.json name drift: ${pkg.name}`);
 if (pkg.version !== EXPECTED_VERSION) fail(`package.json version drift: ${pkg.version}`);

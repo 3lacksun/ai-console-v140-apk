@@ -14,7 +14,7 @@
       "package": "com.nexarenew.aiconsole",
       "allowBackup": false,
       "softwareKeyboardLayoutMode": "resize",
-      "versionCode": 20,
+      "versionCode": 21,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -55,6 +55,7 @@
       "expo-secure-store",
       "expo-local-authentication",
       "./plugins/withDisallowBackup",
+      "./plugins/with16kbPageSize",
       "expo-sharing",
       "expo-status-bar",
       [
