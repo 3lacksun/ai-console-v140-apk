@@ -111,9 +111,9 @@ jobs:
                       install 'Flask==3.1.1'
                       install 'Werkzeug==3.1.3'
                       install 'waitress==3.0.2'
-                      install 'Pillow==12.2.0'
+                      install 'Pillow==11.0.0'
                       install 'requests==2.32.5'
-                      install 'cryptography==46.0.4'
+                      install 'cryptography==42.0.8'
                       install 'qrcode==8.2'
                       install 'argon2-cffi==23.1.0'
                   }
@@ -151,7 +151,6 @@ jobs:
           find "$PIPDIR" -type f -print | sort > python-payload-files.txt
           test -s python-payload-files.txt
           while IFS= read -r f; do sha256sum "$f"; done < python-payload-files.txt > python-payload-sha256.txt
-          grep -RIl --exclude='*.pyc' 'Flask' "$PIPDIR" >/dev/null || true
           sha256sum stage37-python-probe/app/build/outputs/apk/debug/app-debug.apk > generic-probe-apk-sha256.txt
 
       - name: Package reusable Python dependency closure
@@ -177,9 +176,10 @@ jobs:
           targetSdk=36
           minSdk=24
           abi=arm64-v8a
-          requirements=Flask==3.1.1,Werkzeug==3.1.3,waitress==3.0.2,Pillow==12.2.0,requests==2.32.5,cryptography==46.0.4,qrcode==8.2,argon2-cffi==23.1.0
+          requirements=Flask==3.1.1,Werkzeug==3.1.3,waitress==3.0.2,Pillow==11.0.0,requests==2.32.5,cryptography==42.0.8,qrcode==8.2,argon2-cffi==23.1.0
+          binary_pin_provenance=recovered AI Companion September Android integration source; Pillow 12.2.0 was also independently shown unavailable by Chaquopy Android Python 3.13 index
           provenance=GitHub-hosted Ubuntu runner resolving PyPI and Chaquopy Android Python package indexes through Chaquopy 17.0.0
-          verification=generic assembleDebug passed with the exact requirement set before packaging
+          verification=generic assembleDebug passed with the Android-compatible requirement set before packaging
           EOF
           tar -C stage37-python-dependency-seed -czf STAGE37_EXACT_PYTHON_DEPENDENCY_SEED.tar.gz .
           sha256sum STAGE37_EXACT_PYTHON_DEPENDENCY_SEED.tar.gz | tee STAGE37_EXACT_PYTHON_DEPENDENCY_SEED.tar.gz.sha256
