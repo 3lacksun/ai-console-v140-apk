@@ -1,0 +1,188 @@
+name: Stage37 Capacitor Android Runtime Dependency Seed
+
+on:
+  push:
+    branches:
+      - ai-companion-stage37-toolchain-seed
+    paths:
+      - '.github/workflows/stage37-capacitor-runtime-dependency-seed.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seed-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+
+      - name: Recover exact Gradle 8.11.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 5 --retry-delay 2 -o gradle-8.11.1-bin.zip \
+            https://services.gradle.org/distributions/gradle-8.11.1-bin.zip
+          echo 'f397b287023acdba1e9f6fc5ea72d22dd63669d59ed4a289a29b1a76eee151c6  gradle-8.11.1-bin.zip' | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/gradle-dist"
+          unzip -q gradle-8.11.1-bin.zip -d "$RUNNER_TEMP/gradle-dist"
+          "$RUNNER_TEMP/gradle-dist/gradle-8.11.1/bin/gradle" --version | tee gradle-version.txt
+          grep -F 'Gradle 8.11.1' gradle-version.txt
+
+      - name: Create generic runtime dependency probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf stage37-runtime-probe
+          mkdir -p stage37-runtime-probe/app/src/main/java/example/stage37/runtime
+          cat > stage37-runtime-probe/settings.gradle <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = 'Stage37RuntimeDependencyProbe'
+          include ':app'
+          EOF
+          cat > stage37-runtime-probe/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.9.2' apply false
+          }
+          EOF
+          cat > stage37-runtime-probe/app/build.gradle <<'EOF'
+          plugins { id 'com.android.application' }
+          android {
+              namespace 'example.stage37.runtime'
+              compileSdk 36
+              buildToolsVersion '36.0.0'
+              defaultConfig {
+                  applicationId 'example.stage37.runtime'
+                  minSdk 24
+                  targetSdk 36
+                  versionCode 1
+                  versionName '1.0'
+                  ndk { abiFilters 'arm64-v8a' }
+              }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_21
+                  targetCompatibility JavaVersion.VERSION_21
+              }
+          }
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.7.1'
+              implementation 'androidx.coordinatorlayout:coordinatorlayout:1.3.0'
+              implementation 'androidx.core:core-splashscreen:1.2.0'
+              implementation 'androidx.core:core:1.17.0'
+              implementation 'androidx.activity:activity:1.11.0'
+              implementation 'androidx.fragment:fragment:1.8.9'
+              implementation 'androidx.webkit:webkit:1.14.0'
+              implementation 'org.apache.cordova:framework:14.0.1'
+          }
+          EOF
+          cat > stage37-runtime-probe/app/src/main/AndroidManifest.xml <<'EOF'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application android:label="Stage37 Runtime Dependency Probe" />
+          </manifest>
+          EOF
+          cat > stage37-runtime-probe/app/src/main/java/example/stage37/runtime/Marker.java <<'EOF'
+          package example.stage37.runtime;
+          public final class Marker { public static final String VALUE = "stage37-runtime-dependency-seed"; }
+          EOF
+
+      - name: Resolve runtime closure and assemble generic probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GRADLE_USER_HOME="$RUNNER_TEMP/stage37-runtime-gradle-home"
+          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          "$RUNNER_TEMP/gradle-dist/gradle-8.11.1/bin/gradle" \
+            -p stage37-runtime-probe \
+            --no-daemon \
+            --stacktrace \
+            :app:assembleDebug 2>&1 | tee runtime-seed-build.log
+          test -f stage37-runtime-probe/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Verify requested coordinates and record cache hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GRADLE_USER_HOME="$RUNNER_TEMP/stage37-runtime-gradle-home"
+          CACHE="$GRADLE_USER_HOME/caches/modules-2/files-2.1"
+          for coord in \
+            'androidx.appcompat/appcompat/1.7.1' \
+            'androidx.coordinatorlayout/coordinatorlayout/1.3.0' \
+            'androidx.core/core-splashscreen/1.2.0' \
+            'androidx.core/core/1.17.0' \
+            'androidx.activity/activity/1.11.0' \
+            'androidx.fragment/fragment/1.8.9' \
+            'androidx.webkit/webkit/1.14.0' \
+            'org.apache.cordova/framework/14.0.1'; do
+              test -d "$CACHE/$coord"
+            done
+          find "$GRADLE_USER_HOME/caches/modules-2" -type f -print | sort > runtime-cache-files.txt
+          while IFS= read -r f; do sha256sum "$f"; done < runtime-cache-files.txt > runtime-cache-sha256.txt
+          sha256sum stage37-runtime-probe/app/build/outputs/apk/debug/app-debug.apk > generic-probe-apk-sha256.txt
+
+      - name: Package reusable runtime dependency closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GRADLE_USER_HOME="$RUNNER_TEMP/stage37-runtime-gradle-home"
+          rm -rf stage37-runtime-dependency-seed
+          mkdir -p stage37-runtime-dependency-seed/gradle-user-home/caches
+          cp -a "$GRADLE_USER_HOME/caches/modules-2" stage37-runtime-dependency-seed/gradle-user-home/caches/
+          cp runtime-seed-build.log runtime-cache-files.txt runtime-cache-sha256.txt \
+             generic-probe-apk-sha256.txt gradle-version.txt stage37-runtime-dependency-seed/
+          cat > stage37-runtime-dependency-seed/RECOVERY_MANIFEST.txt <<'EOF'
+          purpose=generic Capacitor 8.5.0 Android runtime Maven dependency seed
+          source_contains_application_code=false
+          application_payload_included=false
+          gradle=8.11.1
+          android_gradle_plugin=8.9.2
+          compileSdk=36
+          targetSdk=36
+          minSdk=24
+          abi=arm64-v8a
+          top_level_coordinates=androidx.appcompat:appcompat:1.7.1,androidx.coordinatorlayout:coordinatorlayout:1.3.0,androidx.core:core-splashscreen:1.2.0,androidx.core:core:1.17.0,androidx.activity:activity:1.11.0,androidx.fragment:fragment:1.8.9,androidx.webkit:webkit:1.14.0,org.apache.cordova:framework:14.0.1
+          provenance=GitHub-hosted Ubuntu runner resolving Google Maven and Maven Central
+          verification=generic assembleDebug passed and every requested coordinate directory was asserted before packaging
+          EOF
+          tar -C stage37-runtime-dependency-seed -czf STAGE37_CAPACITOR_RUNTIME_DEPENDENCY_SEED.tar.gz .
+          sha256sum STAGE37_CAPACITOR_RUNTIME_DEPENDENCY_SEED.tar.gz | tee STAGE37_CAPACITOR_RUNTIME_DEPENDENCY_SEED.tar.gz.sha256
+
+      - name: Upload verified runtime dependency seed
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage37-capacitor-runtime-dependency-seed
+          path: |
+            STAGE37_CAPACITOR_RUNTIME_DEPENDENCY_SEED.tar.gz
+            STAGE37_CAPACITOR_RUNTIME_DEPENDENCY_SEED.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 7
