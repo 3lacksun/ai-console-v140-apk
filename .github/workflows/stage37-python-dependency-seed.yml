@@ -1,0 +1,195 @@
+name: Stage37 Exact Python Dependency Seed
+
+on:
+  push:
+    branches:
+      - ai-companion-stage37-toolchain-seed
+    paths:
+      - '.github/workflows/stage37-python-dependency-seed.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seed-python:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+
+      - name: Recover exact Gradle 8.11.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 5 --retry-delay 2 \
+            -o gradle-8.11.1-bin.zip \
+            https://services.gradle.org/distributions/gradle-8.11.1-bin.zip
+          echo 'f397b287023acdba1e9f6fc5ea72d22dd63669d59ed4a289a29b1a76eee151c6  gradle-8.11.1-bin.zip' | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/gradle-dist"
+          unzip -q gradle-8.11.1-bin.zip -d "$RUNNER_TEMP/gradle-dist"
+          "$RUNNER_TEMP/gradle-dist/gradle-8.11.1/bin/gradle" --version | tee gradle-version.txt
+          grep -F 'Gradle 8.11.1' gradle-version.txt
+
+      - name: Create generic Chaquopy Python 3.13 dependency probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf stage37-python-probe
+          mkdir -p stage37-python-probe/app/src/main/python
+          cat > stage37-python-probe/settings.gradle <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = 'Stage37PythonDependencyProbe'
+          include ':app'
+          EOF
+          cat > stage37-python-probe/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.9.2' apply false
+              id 'com.chaquo.python' version '17.0.0' apply false
+          }
+          EOF
+          cat > stage37-python-probe/app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application'
+              id 'com.chaquo.python'
+          }
+
+          android {
+              namespace 'example.stage37.pythonseed'
+              compileSdk 36
+              buildToolsVersion '36.0.0'
+              defaultConfig {
+                  applicationId 'example.stage37.pythonseed'
+                  minSdk 24
+                  targetSdk 36
+                  versionCode 1
+                  versionName '1.0'
+                  ndk { abiFilters 'arm64-v8a' }
+              }
+          }
+
+          chaquopy {
+              defaultConfig {
+                  version = '3.13'
+                  buildPython('python3.13')
+                  pip {
+                      install 'Flask==3.1.1'
+                      install 'Werkzeug==3.1.3'
+                      install 'waitress==3.0.2'
+                      install 'Pillow==12.2.0'
+                      install 'requests==2.32.5'
+                      install 'cryptography==46.0.4'
+                      install 'qrcode==8.2'
+                      install 'argon2-cffi==23.1.0'
+                  }
+              }
+          }
+          EOF
+          cat > stage37-python-probe/app/src/main/AndroidManifest.xml <<'EOF'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application android:label="Stage37 Python Dependency Probe" />
+          </manifest>
+          EOF
+          cat > stage37-python-probe/app/src/main/python/main.py <<'EOF'
+          VALUE = 'stage37-python-dependency-seed'
+          EOF
+
+      - name: Resolve exact Python requirements and assemble generic probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GRADLE_USER_HOME="$RUNNER_TEMP/stage37-python-gradle-home"
+          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          "$RUNNER_TEMP/gradle-dist/gradle-8.11.1/bin/gradle" \
+            -p stage37-python-probe \
+            --no-daemon \
+            --stacktrace \
+            :app:assembleDebug 2>&1 | tee python-seed-build.log
+          test -f stage37-python-probe/app/build/outputs/apk/debug/app-debug.apk
+          test -d stage37-python-probe/app/build/python/pip/debug
+
+      - name: Verify resolved Python package payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          PIPDIR=stage37-python-probe/app/build/python/pip/debug
+          find "$PIPDIR" -type f -print | sort > python-payload-files.txt
+          test -s python-payload-files.txt
+          while IFS= read -r f; do sha256sum "$f"; done < python-payload-files.txt > python-payload-sha256.txt
+          grep -RIl --exclude='*.pyc' 'Flask' "$PIPDIR" >/dev/null || true
+          sha256sum stage37-python-probe/app/build/outputs/apk/debug/app-debug.apk > generic-probe-apk-sha256.txt
+
+      - name: Package reusable Python dependency closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf stage37-python-dependency-seed
+          mkdir -p stage37-python-dependency-seed/app-build-python/pip
+          cp -a stage37-python-probe/app/build/python/pip/debug \
+            stage37-python-dependency-seed/app-build-python/pip/
+          cp python-seed-build.log python-payload-files.txt python-payload-sha256.txt \
+             generic-probe-apk-sha256.txt gradle-version.txt \
+             stage37-python-dependency-seed/
+          cat > stage37-python-dependency-seed/RECOVERY_MANIFEST.txt <<'EOF'
+          purpose=generic Chaquopy Python dependency seed
+          source_contains_application_code=false
+          application_payload_included=false
+          gradle=8.11.1
+          android_gradle_plugin=8.9.2
+          chaquopy=17.0.0
+          python=3.13
+          compileSdk=36
+          targetSdk=36
+          minSdk=24
+          abi=arm64-v8a
+          requirements=Flask==3.1.1,Werkzeug==3.1.3,waitress==3.0.2,Pillow==12.2.0,requests==2.32.5,cryptography==46.0.4,qrcode==8.2,argon2-cffi==23.1.0
+          provenance=GitHub-hosted Ubuntu runner resolving PyPI and Chaquopy Android Python package indexes through Chaquopy 17.0.0
+          verification=generic assembleDebug passed with the exact requirement set before packaging
+          EOF
+          tar -C stage37-python-dependency-seed -czf STAGE37_EXACT_PYTHON_DEPENDENCY_SEED.tar.gz .
+          sha256sum STAGE37_EXACT_PYTHON_DEPENDENCY_SEED.tar.gz | tee STAGE37_EXACT_PYTHON_DEPENDENCY_SEED.tar.gz.sha256
+
+      - name: Upload verified Python dependency seed
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage37-exact-python-dependency-seed
+          path: |
+            STAGE37_EXACT_PYTHON_DEPENDENCY_SEED.tar.gz
+            STAGE37_EXACT_PYTHON_DEPENDENCY_SEED.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 7
