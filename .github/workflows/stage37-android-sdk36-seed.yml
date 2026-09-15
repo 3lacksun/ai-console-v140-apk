@@ -17,16 +17,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install exact SDK 36 components
+      - name: Install exact SDK 36 components from runner SDK
         shell: bash
         run: |
           set -euo pipefail
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
-          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          export ANDROID_HOME="$ANDROID_SDK_ROOT"
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(command -v sdkmanager)"
+          fi
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+          SDK="$ANDROID_SDK_ROOT"
           test -f "$SDK/platforms/android-36/android.jar"
           test -x "$SDK/build-tools/36.0.0/aapt2"
           test -f "$SDK/build-tools/36.0.0/apksigner"
@@ -34,12 +38,13 @@ jobs:
           "$SDK/build-tools/36.0.0/aapt2" version | tee aapt2-version.txt
           "$SDK/build-tools/36.0.0/apksigner" version | tee apksigner-version.txt
           "$SDK/build-tools/36.0.0/zipalign" -h > zipalign-help.txt 2>&1 || true
+          printf '%s\n' "$SDK" > android-sdk-root.txt
 
       - name: Package reusable SDK closure
         shell: bash
         run: |
           set -euo pipefail
-          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          SDK="$(cat android-sdk-root.txt)"
           OUT=stage37-android-sdk36
           rm -rf "$OUT"
           mkdir -p "$OUT/platforms" "$OUT/build-tools" "$OUT/platform-tools" "$OUT/licenses"
@@ -55,10 +60,10 @@ jobs:
           platform=platforms;android-36
           build_tools=build-tools;36.0.0
           platform_tools=platform-tools
-          provenance=GitHub-hosted Ubuntu runner using android-actions/setup-android@v3 and sdkmanager
+          provenance=GitHub-hosted Ubuntu 24.04 runner preinstalled Android SDK plus sdkmanager
           verification=android.jar,aapt2,apksigner,zipalign asserted before packaging
           EOF
-          find "$OUT" -type f -print0 | sort -z | xargs -0 sha256sum > "$OUT/SDK_SHA256SUMS.txt"
+          (cd "$OUT" && find . -type f -print0 | sort -z | xargs -0 sha256sum > SDK_SHA256SUMS.txt)
           tar -C "$OUT" -czf STAGE37_ANDROID_SDK36_SEED.tar.gz .
           sha256sum STAGE37_ANDROID_SDK36_SEED.tar.gz | tee STAGE37_ANDROID_SDK36_SEED.tar.gz.sha256
 
