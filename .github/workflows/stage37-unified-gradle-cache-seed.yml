@@ -1,0 +1,192 @@
+name: Stage37 Unified Gradle Cache Seed
+
+on:
+  push:
+    branches: [ai-companion-stage37-toolchain-seed]
+    paths: ['.github/workflows/stage37-unified-gradle-cache-seed.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seed-unified-cache:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install exact Android SDK components from runner SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          export ANDROID_HOME="$ANDROID_SDK_ROOT"
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then SDKMANAGER="$(command -v sdkmanager)"; fi
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+          test -f "$ANDROID_SDK_ROOT/platforms/android-36/android.jar"
+          test -x "$ANDROID_SDK_ROOT/build-tools/36.0.0/aapt2"
+
+      - name: Recover exact Gradle 8.11.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 5 --retry-delay 2 -o gradle-8.11.1-bin.zip https://services.gradle.org/distributions/gradle-8.11.1-bin.zip
+          echo 'f397b287023acdba1e9f6fc5ea72d22dd63669d59ed4a289a29b1a76eee151c6  gradle-8.11.1-bin.zip' | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/gradle-dist"
+          unzip -q gradle-8.11.1-bin.zip -d "$RUNNER_TEMP/gradle-dist"
+          "$RUNNER_TEMP/gradle-dist/gradle-8.11.1/bin/gradle" --version | tee gradle-version.txt
+
+      - name: Create unified exact probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf stage37-unified-probe
+          mkdir -p stage37-unified-probe/app/src/main/python stage37-unified-probe/app/src/main/java/example/stage37/unified
+          cat > stage37-unified-probe/gradle.properties <<'EOF'
+          android.useAndroidX=true
+          android.enableJetifier=true
+          EOF
+          cat > stage37-unified-probe/settings.gradle <<'EOF'
+          pluginManagement {
+              repositories { google(); mavenCentral(); gradlePluginPortal() }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories { google(); mavenCentral() }
+          }
+          rootProject.name = 'Stage37UnifiedProbe'
+          include ':app'
+          EOF
+          cat > stage37-unified-probe/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.9.2' apply false
+              id 'com.chaquo.python' version '17.0.0' apply false
+          }
+          EOF
+          cat > stage37-unified-probe/app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application'
+              id 'com.chaquo.python'
+          }
+          android {
+              namespace 'example.stage37.unified'
+              compileSdk 36
+              buildToolsVersion '36.0.0'
+              defaultConfig {
+                  applicationId 'example.stage37.unified'
+                  minSdk 24
+                  targetSdk 36
+                  versionCode 1
+                  versionName '1.0'
+                  ndk { abiFilters 'arm64-v8a' }
+              }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_21
+                  targetCompatibility JavaVersion.VERSION_21
+              }
+          }
+          chaquopy {
+              defaultConfig {
+                  version = '3.13'
+                  buildPython('python3.13')
+              }
+          }
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.7.1'
+              implementation 'androidx.coordinatorlayout:coordinatorlayout:1.3.0'
+              implementation 'androidx.core:core-splashscreen:1.2.0'
+              implementation 'androidx.core:core:1.17.0'
+              implementation 'androidx.activity:activity:1.11.0'
+              implementation 'androidx.fragment:fragment:1.8.9'
+              implementation 'androidx.webkit:webkit:1.14.0'
+              implementation 'org.apache.cordova:framework:14.0.1'
+          }
+          EOF
+          cat > stage37-unified-probe/app/src/main/AndroidManifest.xml <<'EOF'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"><application android:label="Stage37 Unified Probe" /></manifest>
+          EOF
+          cat > stage37-unified-probe/app/src/main/python/main.py <<'EOF'
+          VALUE = 'stage37-unified-gradle-cache-seed'
+          EOF
+          cat > stage37-unified-probe/app/src/main/java/example/stage37/unified/Marker.java <<'EOF'
+          package example.stage37.unified;
+          public final class Marker { public static final String VALUE = "stage37-unified-gradle-cache-seed"; }
+          EOF
+
+      - name: Resolve unified closure and assemble probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GRADLE_USER_HOME="$RUNNER_TEMP/stage37-unified-gradle-home"
+          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          "$RUNNER_TEMP/gradle-dist/gradle-8.11.1/bin/gradle" -p stage37-unified-probe --no-daemon --stacktrace :app:assembleDebug 2>&1 | tee unified-seed-build.log
+          test -f stage37-unified-probe/app/build/outputs/apk/debug/app-debug.apk
+          CACHE="$GRADLE_USER_HOME/caches/modules-2/files-2.1"
+          for coord in \
+            'com.android.tools.build/gradle/8.9.2' \
+            'com.chaquo.python/gradle/17.0.0' \
+            'com.chaquo.python/com.chaquo.python.gradle.plugin/17.0.0' \
+            'androidx.appcompat/appcompat/1.7.1' \
+            'androidx.coordinatorlayout/coordinatorlayout/1.3.0' \
+            'androidx.core/core-splashscreen/1.2.0' \
+            'androidx.core/core/1.17.0' \
+            'androidx.activity/activity/1.11.0' \
+            'androidx.fragment/fragment/1.8.9' \
+            'androidx.webkit/webkit/1.14.0' \
+            'org.apache.cordova/framework/14.0.1'; do test -d "$CACHE/$coord"; done
+          sha256sum stage37-unified-probe/app/build/outputs/apk/debug/app-debug.apk > probe-apk-sha256.txt
+
+      - name: Package coherent unified Gradle cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GRADLE_USER_HOME="$RUNNER_TEMP/stage37-unified-gradle-home"
+          OUT=stage37-unified-gradle-cache
+          rm -rf "$OUT"
+          mkdir -p "$OUT/gradle-user-home/caches"
+          cp -a "$GRADLE_USER_HOME/caches/modules-2" "$OUT/gradle-user-home/caches/"
+          cp gradle-version.txt unified-seed-build.log probe-apk-sha256.txt "$OUT/"
+          cat > "$OUT/RECOVERY_MANIFEST.txt" <<'EOF'
+          purpose=coherent unified offline Gradle cache for AI Companion Stage 37 build
+          source_contains_application_code=false
+          application_payload_included=false
+          gradle=8.11.1
+          android_gradle_plugin=8.9.2
+          chaquopy=17.0.0
+          python=3.13
+          compileSdk=36
+          build_tools=36.0.0
+          targetSdk=36
+          minSdk=24
+          abi=arm64-v8a
+          capacitor_android_runtime_dependencies=8.5.0 coordinate set
+          provenance=GitHub-hosted Ubuntu runner resolving Google Maven, Maven Central and Gradle Plugin Portal
+          verification=single generic assembleDebug passed with Chaquopy and complete Capacitor Android runtime dependency set in one Gradle user home
+          EOF
+          tar -C "$OUT" -czf STAGE37_UNIFIED_GRADLE_CACHE_SEED.tar.gz .
+          sha256sum STAGE37_UNIFIED_GRADLE_CACHE_SEED.tar.gz | tee STAGE37_UNIFIED_GRADLE_CACHE_SEED.tar.gz.sha256
+
+      - name: Upload unified cache seed
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage37-unified-gradle-cache-seed
+          path: |
+            STAGE37_UNIFIED_GRADLE_CACHE_SEED.tar.gz
+            STAGE37_UNIFIED_GRADLE_CACHE_SEED.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 7
