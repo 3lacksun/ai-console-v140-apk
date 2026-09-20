@@ -1,0 +1,38 @@
+name: Stage38 websocket-client 1.8.0 seed
+
+on:
+  push:
+    branches:
+      - ai-companion-stage37-toolchain-seed
+    paths:
+      - '.github/workflows/stage38-websocket-client-1.8.0-seed.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Download exact websocket-client wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 5 --retry-delay 2 \
+            -o websocket_client-1.8.0-py3-none-any.whl \
+            https://files.pythonhosted.org/packages/5a/84/44687a29792a70e111c5c477230a72c4b957d88d16141199bf9acb7537a3/websocket_client-1.8.0-py3-none-any.whl
+          echo '17b44cc997f5c498e809b22cdf2d9c7a9e71c02c8cc2b6c56e7c2d1239bfa526  websocket_client-1.8.0-py3-none-any.whl' | sha256sum -c -
+          unzip -p websocket_client-1.8.0-py3-none-any.whl websocket_client-1.8.0.dist-info/METADATA | grep -Fx 'Version: 1.8.0'
+          sha256sum websocket_client-1.8.0-py3-none-any.whl > websocket_client-1.8.0-py3-none-any.whl.sha256
+
+      - name: Upload verified wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage38-websocket-client-1.8.0
+          path: |
+            websocket_client-1.8.0-py3-none-any.whl
+            websocket_client-1.8.0-py3-none-any.whl.sha256
+          if-no-files-found: error
+          retention-days: 7
