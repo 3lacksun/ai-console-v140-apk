@@ -1,0 +1,49 @@
+name: Capacitor 8.5.2 Dependency Seed
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  seed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Set up Node 22
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Build exact Capacitor dependency seed
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p seed && cd seed
+          cat > package.json <<'JSON'
+          {
+            "name": "capacitor-8-5-2-seed",
+            "version": "1.0.0",
+            "private": true,
+            "dependencies": {
+              "@capacitor/android": "8.5.2",
+              "@capacitor/core": "8.5.2",
+              "@capacitor/cli": "8.5.2"
+            }
+          }
+          JSON
+          npm install --no-audit --no-fund
+          npm list @capacitor/android @capacitor/core @capacitor/cli
+          tar -czf ../capacitor-8.5.2-node_modules.tar.gz node_modules package-lock.json package.json
+          cd ..
+          sha256sum capacitor-8.5.2-node_modules.tar.gz > capacitor-8.5.2-node_modules.tar.gz.sha256
+      - name: Upload seed
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: capacitor-8.5.2-dependency-seed
+          if-no-files-found: error
+          retention-days: 1
+          path: |
+            capacitor-8.5.2-node_modules.tar.gz
+            capacitor-8.5.2-node_modules.tar.gz.sha256
