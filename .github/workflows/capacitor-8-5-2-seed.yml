@@ -21,11 +21,14 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699
-      - name: Install Android API 36
+      - name: Ensure Android API 36
         shell: bash
-        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+        run: |
+          set -euo pipefail
+          SDKM="$(command -v sdkmanager || true)"
+          if [ -z "$SDKM" ]; then SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"; fi
+          yes | "$SDKM" --licenses >/dev/null || true
+          "$SDKM" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
       - name: Build exact Capacitor and Gradle dependency seeds
         shell: bash
         run: |
