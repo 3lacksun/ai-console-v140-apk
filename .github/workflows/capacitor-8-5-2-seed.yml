@@ -1,0 +1,84 @@
+name: Capacitor 8.5.2 Dependency Seed
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  seed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Set up Node 22
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Set up Java 21
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Ensure Android API 36
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKM="$(command -v sdkmanager || true)"
+          if [ -z "$SDKM" ]; then SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"; fi
+          yes | "$SDKM" --licenses >/dev/null || true
+          "$SDKM" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+      - name: Build exact Capacitor and Gradle dependency seeds
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p seed && cd seed
+          cat > package.json <<'JSON'
+          {
+            "name": "capacitor-8-5-2-seed",
+            "version": "1.0.0",
+            "private": true,
+            "dependencies": {
+              "@capacitor/android": "8.5.2",
+              "@capacitor/core": "8.5.2",
+              "@capacitor/cli": "8.5.2"
+            }
+          }
+          JSON
+          npm install --no-audit --no-fund
+          npm list @capacitor/android @capacitor/core @capacitor/cli
+          tar -czf ../capacitor-8.5.2-node_modules.tar.gz node_modules package-lock.json package.json
+          mkdir -p www
+          printf '<!doctype html><html><body>seed</body></html>\n' > www/index.html
+          cat > capacitor.config.json <<'JSON'
+          {
+            "appId": "com.duffpro.unifieddiffpatcher",
+            "appName": "Unified Diff Patcher",
+            "webDir": "www"
+          }
+          JSON
+          ./node_modules/.bin/cap add android
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("android/app/build.gradle")
+          s=p.read_text()
+          s=s.replace("dependencies {", "dependencies {\n    implementation 'androidx.documentfile:documentfile:1.1.0'", 1)
+          p.write_text(s)
+          PY
+          cd android
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+          cd ../..
+          tar -C "$HOME/.gradle/caches" -czf gradle-modules-2-capacitor-8.5.2.tar.gz modules-2
+          sha256sum capacitor-8.5.2-node_modules.tar.gz gradle-modules-2-capacitor-8.5.2.tar.gz > dependency-seed.sha256
+      - name: Upload seeds
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: capacitor-8.5.2-full-dependency-seed
+          if-no-files-found: error
+          retention-days: 1
+          path: |
+            capacitor-8.5.2-node_modules.tar.gz
+            gradle-modules-2-capacitor-8.5.2.tar.gz
+            dependency-seed.sha256
